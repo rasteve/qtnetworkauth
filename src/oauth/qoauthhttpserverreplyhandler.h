@@ -10,6 +10,9 @@
 #include <QtNetworkAuth/qoauthoobreplyhandler.h>
 
 #include <QtNetwork/qhostaddress.h>
+#ifndef QT_NO_SSL
+#include <QtNetwork/qsslconfiguration.h>
+#endif
 
 QT_BEGIN_NAMESPACE
 
@@ -38,6 +41,10 @@ public:
     quint16 port() const;
 
     bool listen(const QHostAddress &address = QHostAddress::Any, quint16 port = 0);
+#ifndef QT_NO_SSL
+    bool listen(const QSslConfiguration &configuration,
+                const QHostAddress &address = QHostAddress::Any, quint16 port = 0);
+#endif
     void close();
     bool isListening() const;
 

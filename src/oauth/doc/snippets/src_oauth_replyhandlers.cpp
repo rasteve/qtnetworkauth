@@ -18,6 +18,9 @@
 #include <QtNetworkAuth/qoauthhttpserverreplyhandler.h>
 #include <QtNetworkAuth/qoauthurischemereplyhandler.h>
 
+#include <QtNetwork/qsslcertificate.h>
+#include <QtNetwork/qsslkey.h>
+#include <QtNetwork/qsslconfiguration.h>
 #include <QtNetwork/qrestreply.h>
 #include <QtNetwork/qnetworkrequestfactory.h>
 
@@ -29,6 +32,7 @@
 #include <QtGui/qdesktopservices.h>
 
 #include <QtCore/qcommandlineparser.h>
+#include <QtCore/qfile.h>
 #include <QtCore/qjsonarray.h>
 #include <QtCore/qjsondocument.h>
 #include <QtCore/qobject.h>
@@ -48,6 +52,9 @@ static constexpr auto oidcConfigUrl =
 static constexpr auto oidcJwksUrl = "https://www.myqtapp.example.com/v1/certs"_L1;
 static constexpr auto oidcUserInfoUrl = "https://oidc.myqtapp.example.com/v1/userinfo"_L1;
 static constexpr auto clientSecret = "abcdefg"_L1;
+
+static constexpr auto sslCertificateFile = ""_L1;
+static constexpr auto sslPrivateKeyFile = ""_L1;
 
 HttpExample::HttpExample()
 {
@@ -121,6 +128,49 @@ void HttpExample::setupSystemBrowser()
     readOIDCConfiguration({oidcConfigUrl});
     readJSONWebKeySet({oidcJwksUrl});
     readUserInfo({oidcUserInfoUrl});
+}
+
+void HttpExample::setupSystemBrowserLocalHostHttps()
+{
+    // m_oauth.setClientIdentifierSharedKey(clientSecret); // Need depends: vendor, scheme, app type
+
+    //! [localhost-https-scheme-setup]
+    // Read certificate and private key
+    auto certificates = QSslCertificate::fromPath(sslCertificateFile);
+    QFile keyFile(sslPrivateKeyFile);
+    if (!keyFile.open(QFile::ReadOnly)) {
+        qWarning("Cannot open key file");
+        return;
+    }
+    QSslKey privateKey(&keyFile, QSsl::Rsa, QSsl::Pem);
+    if (certificates.size() == 0 || privateKey.isNull()) {
+        qWarning("SSL certificate data invalid");
+        return;
+    }
+
+    // Create SSL configuration
+    QSslConfiguration configuration = QSslConfiguration::defaultConfiguration();
+    configuration.setLocalCertificate(certificates.at(0));
+    configuration.setPrivateKey(privateKey);
+
+    // Instantiate handler with the SSL configuration
+    m_handler = new QOAuthHttpServerReplyHandler(1234, this);
+    m_handler->listen(configuration);
+    //! [localhost-https-scheme-setup]
+
+    connect(&m_oauth, &QAbstractOAuth::authorizeWithBrowser, this, &QDesktopServices::openUrl);
+    connect(&m_oauth, &QAbstractOAuth::granted, this, [this]() {
+        // Here we use QNetworkRequestFactory to store the access token
+        m_api.setBearerToken(m_oauth.token().toLatin1());
+        m_handler->close();
+    });
+
+    m_oauth.setReplyHandler(m_handler);
+
+    // Initiate the authorization
+    if (m_handler->isListening()) {
+        m_oauth.grant();
+    }
 }
 
 void HttpExample::readOIDCConfiguration(const QUrl &url)

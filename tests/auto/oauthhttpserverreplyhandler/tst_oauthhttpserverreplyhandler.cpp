@@ -18,6 +18,7 @@ class tst_QOAuthHttpServerReplyHandler : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void initTestCase();
     void callback_data();
     void callback();
     void callbackCaching();
@@ -27,7 +28,42 @@ private Q_SLOTS:
     void badCallbackWrongMethod();
     void callbackDataReceived_data();
     void callbackDataReceived();
+#ifndef QT_NO_SSL
+    void localhostHttps();
+#endif
+
+private:
+    QString testDataDir;
+    [[nodiscard]] auto useTemporaryKeychain()
+    {
+#ifndef QT_NO_SSL
+        // Set the same environment value as CI uses, so that it's possible
+        // to run autotests locally without macOS asking for permission to use
+        // a private key in keychain (with TLS sockets)
+        auto value = qEnvironmentVariable("QT_SSL_USE_TEMPORARY_KEYCHAIN");
+        qputenv("QT_SSL_USE_TEMPORARY_KEYCHAIN", "1");
+        auto envRollback = qScopeGuard([value](){
+            if (value.isEmpty())
+                qunsetenv("QT_SSL_USE_TEMPORARY_KEYCHAIN");
+            else
+                qputenv("QT_SSL_USE_TEMPORARY_KEYCHAIN", value.toUtf8());
+        });
+        return envRollback;
+#else
+        // avoid maybe-unused warnings from callers
+        return qScopeGuard([]{});
+#endif // QT_NO_SSL
+    }
 };
+
+void tst_QOAuthHttpServerReplyHandler::initTestCase()
+{
+    testDataDir = QFileInfo(QFINDTESTDATA("certs")).absolutePath();
+    if (testDataDir.isEmpty())
+        testDataDir = QCoreApplication::applicationDirPath();
+    if (!testDataDir.endsWith(QLatin1String("/")))
+        testDataDir += QLatin1String("/");
+}
 
 void tst_QOAuthHttpServerReplyHandler::callback_data()
 {
@@ -248,6 +284,91 @@ void tst_QOAuthHttpServerReplyHandler::callbackDataReceived()
     QTRY_COMPARE(spy.size(), 1);
     QCOMPARE(spy.at(0).at(0).toByteArray(), expected_response_data.toLatin1());
 }
+
+#ifndef QT_NO_SSL
+static QSslConfiguration createSslConfiguration(QString keyFileName, QString certificateFileName)
+{
+    QSslConfiguration configuration(QSslConfiguration::defaultConfiguration());
+
+    QFile keyFile(keyFileName);
+    if (keyFile.open(QIODevice::ReadOnly)) {
+        QSslKey key(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
+        if (!key.isNull()) {
+            configuration.setPrivateKey(key);
+        } else {
+            qCritical() << "Could not parse key: " << keyFileName;
+        }
+    } else {
+        qCritical() << "Could not find key: " << keyFileName;
+    }
+
+    QList<QSslCertificate> localCert = QSslCertificate::fromPath(certificateFileName);
+    if (!localCert.isEmpty() && !localCert.first().isNull()) {
+        configuration.setLocalCertificate(localCert.first());
+    } else {
+        qCritical() << "Could not find certificate: " << certificateFileName;
+    }
+    return configuration;
+}
+
+void tst_QOAuthHttpServerReplyHandler::localhostHttps()
+{
+    if (!QSslSocket::supportsSsl())
+        QSKIP("This test will fail because the backend does not support TLS");
+
+    auto rollback = useTemporaryKeychain();
+
+    // erros may vary, depending on backend
+    const QSet<QSslError::SslError> expectedSslErrors{ QSslError::SelfSignedCertificate,
+                                                       QSslError::CertificateUntrusted,
+                                                       QSslError::HostNameMismatch };
+    auto serverConfig = createSslConfiguration(testDataDir + "certs/selfsigned-server.key",
+                                               testDataDir + "certs/selfsigned-server.crt");
+
+    QOAuthHttpServerReplyHandler replyHandler;
+    replyHandler.setCallbackPath(u"/callback"_s);
+
+    // Initially the handler is a plain 'http' handler
+    QVERIFY(replyHandler.isListening());
+    QCOMPARE(QUrl(replyHandler.callback()).scheme(), u"http"_s);
+
+    // Calling listen() with SSL configuration makes handler to use 'https'
+    QVERIFY(replyHandler.listen(serverConfig));
+    QVERIFY(replyHandler.isListening());
+    const QUrl redirectUrl = replyHandler.callback() + u"?state=somestate&code=somecode"_s;
+    QCOMPARE(redirectUrl.scheme(), u"https"_s);
+
+    // Issue a HTTP GET to the handler's server to mimic OAuth2 redirection event
+    QSignalSpy spy(&replyHandler, &QOAuthHttpServerReplyHandler::callbackReceived);
+    QNetworkAccessManager networkAccessManager;
+    QNetworkRequest networkRequest(redirectUrl);
+    QNetworkReplyPtr reply;
+
+    connect(&networkAccessManager, &QNetworkAccessManager::sslErrors, this,
+            [&expectedSslErrors](QNetworkReply *reply, const QList<QSslError> &errors) {
+        for (const auto &error : errors)
+            QVERIFY(expectedSslErrors.contains(error.error()));
+        reply->ignoreSslErrors();
+    });
+
+    reply.reset(networkAccessManager.get(networkRequest));
+    QTRY_COMPARE(spy.size(), 1);
+    const auto parameters = spy.at(0).at(0).toMap();
+    QCOMPARE(parameters["state"_L1].toString(), u"somestate"_s);
+    QCOMPARE(parameters["code"_L1].toString(), u"somecode"_s);
+
+    // Call listen with invalid SSL configuration
+    QTest::ignoreMessage(QtWarningMsg, "QSslConfiguration is null, cannot listen");
+    QVERIFY(!replyHandler.listen(QSslConfiguration{}));
+    QVERIFY(!replyHandler.isListening());
+
+    // Call listen() without SSL configuration and verify it uses plain 'http' again
+    QVERIFY(replyHandler.listen());
+    QVERIFY(replyHandler.isListening());
+    QCOMPARE(QUrl(replyHandler.callback()).scheme(), u"http"_s);
+}
+#endif // QT_NO_SSL
+
 
 QTEST_MAIN(tst_QOAuthHttpServerReplyHandler)
 #include "tst_oauthhttpserverreplyhandler.moc"

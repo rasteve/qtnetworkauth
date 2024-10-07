@@ -40,6 +40,7 @@ signals:
 public:
     HttpExample();
     void setupSystemBrowser();
+    void setupSystemBrowserLocalHostHttps();
     void setupWebEngineWidgets();
 
     void readOIDCConfiguration(const QUrl &url);
