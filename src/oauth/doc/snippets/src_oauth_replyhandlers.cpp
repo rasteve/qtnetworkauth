@@ -56,16 +56,17 @@ HttpExample::HttpExample()
     mainWindow.setCentralWidget(webView);
     mainWindow.resize(800, 600);
 #endif
+
+    //! [oidc-setting-scope]
+    m_oauth.setRequestedScope({"openid"_L1});
+    //! [oidc-setting-scope]
+
     //! [httpserver-service-configuration]
     m_oauth.setAuthorizationUrl(QUrl(authorizationUrl));
     m_oauth.setAccessTokenUrl(QUrl(accessTokenUrl));
     m_oauth.setClientIdentifier(clientIdentifier);
     m_oauth.setRequestedScope({scope});
     //! [httpserver-service-configuration]
-
-    //! [oidc-setting-scope]
-    m_oauth.setRequestedScope({"openid"_L1});
-    //! [oidc-setting-scope]
 
     //! [oidc-setting-nonce-mode]
     // This is for illustrative purposes, 'Automatic' is the default mode
