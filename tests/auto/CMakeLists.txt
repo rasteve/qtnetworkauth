@@ -4,6 +4,7 @@
 add_subdirectory(cmake)
 add_subdirectory(oauth1)
 add_subdirectory(oauth2)
+add_subdirectory(oauth2deviceflow)
 add_subdirectory(oauth1signature)
 add_subdirectory(oauthhttpserverreplyhandler)
 if(QT_FEATURE_urischeme_replyhandler)

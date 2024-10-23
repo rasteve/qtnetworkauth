@@ -349,6 +349,15 @@ const QString OAuth2::codeChallenge =      u"code_challenge"_s;
 const QString OAuth2::codeChallengeMethod = u"code_challenge_method"_s;
 const QString OAuth2::nonce =              u"nonce"_s;
 const QString OAuth2::idToken =            u"id_token"_s;
+const QString OAuth2::deviceCode =         u"device_code"_s;
+const QString OAuth2::userCode =           u"user_code"_s;
+// RFC keyword is verification_uri[_complete], but some servers use 'url' (note L)
+// https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
+const QString OAuth2::verificationUri =    u"verification_uri"_s;
+const QString OAuth2::verificationUrl =    u"verification_url"_s;
+const QString OAuth2::completeVerificationUri = u"verification_uri_complete"_s;
+const QString OAuth2::completeVerificationUrl = u"verification_url_complete"_s;
+const QString OAuth2::interval =           u"interval"_s;
 
 QAbstractOAuth2Private::QAbstractOAuth2Private(const QPair<QString, QString> &clientCredentials,
                                                const QUrl &authorizationUrl,
@@ -577,6 +586,24 @@ QAbstractOAuth2Private::RequestAndBody QAbstractOAuth2Private::createRefreshRequ
     result.body = query.toString(QUrl::FullyEncoded).toUtf8();
 
     return result;
+}
+
+void QAbstractOAuth2Private::logAuthorizationStageWarning(QLatin1StringView message)
+{
+    static constexpr auto base = "Authorization stage: %s";
+    qCWarning(loggingCategory, base, message.latin1());
+}
+
+void QAbstractOAuth2Private::logAuthorizationStageWarning(QLatin1StringView message, int detail)
+{
+    static constexpr auto base = "Authorization stage: %s: %d";
+    qCWarning(loggingCategory, base, message.latin1(), detail);
+}
+
+void QAbstractOAuth2Private::logTokenStageWarning(QLatin1StringView message)
+{
+    static constexpr auto base = "Token stage: %s";
+    qCWarning(loggingCategory, base, message.latin1());
 }
 
 bool QAbstractOAuth2Private::verifyThreadAffinity(const QObject *contextObject)

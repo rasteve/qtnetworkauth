@@ -59,6 +59,13 @@ public:
     };
     [[nodiscard]] RequestAndBody createRefreshRequestAndBody(const QUrl &url);
 
+    Q_DECL_COLD_FUNCTION
+    void logAuthorizationStageWarning(QLatin1StringView message);
+    Q_DECL_COLD_FUNCTION
+    void logAuthorizationStageWarning(QLatin1StringView message, int detail);
+    Q_DECL_COLD_FUNCTION
+    void logTokenStageWarning(QLatin1StringView message);
+
     struct CallerInfo {
         QPointer<const QObject> contextObject = nullptr;
         QtPrivate::SlotObjUniquePtr slot;
@@ -110,6 +117,15 @@ public:
         static const QString codeChallengeMethod;
         static const QString nonce;
         static const QString idToken;
+        static const QString deviceCode;
+        static const QString userCode;
+        // RFC keyword is verification_uri[_complete], but some servers use 'url' (note L)
+        // https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
+        static const QString verificationUri;
+        static const QString verificationUrl;
+        static const QString completeVerificationUri;
+        static const QString completeVerificationUrl;
+        static const QString interval;
     };
 };
 

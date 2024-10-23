@@ -362,6 +362,71 @@ void HttpExample::authorize()
     }
 }
 
+void HttpExample::setupDeviceFlow()
+{
+    //! [deviceflow-setup]
+    m_deviceFlow.setAuthorizationUrl(QUrl(authorizationUrl));
+    m_deviceFlow.setTokenUrl(QUrl(accessTokenUrl));
+    m_deviceFlow.setRequestedScope({scope});
+    m_deviceFlow.setClientIdentifier(clientIdentifier);
+    // The need for a client secret depends on the authorization server
+    m_deviceFlow.setClientIdentifierSharedKey(clientSecret);
+    //! [deviceflow-setup]
+
+    //! [deviceflow-handle-authorizewithusercode]
+    connect(&m_deviceFlow, &QOAuth2DeviceAuthorizationFlow::authorizeWithUserCode, this,
+        [](const QUrl &verificationUrl, const QString &userCode, const QUrl &completeVerificationUrl) {
+            if (completeVerificationUrl.isValid()) {
+                // If the authorization server provided a complete URL
+                // that already contains the necessary data as part of the URL parameters,
+                // you can choose to use that
+                qDebug() << "Complete verification uri:" << completeVerificationUrl;
+            } else {
+                // Authorization server provided only verification URL; use that
+                qDebug() << "Verification uri and usercode:" << verificationUrl << userCode;
+            }
+        }
+    );
+    //! [deviceflow-handle-authorizewithusercode]
+
+    // This connect here is for using this snippet app, for testing purposes it opens browser and
+    // prints the user code
+    connect(&m_deviceFlow, &QOAuth2DeviceAuthorizationFlow::authorizeWithUserCode, this,
+        [](const QUrl &verificationUrl, const QString &userCode,
+            const QUrl &completeVerificationUrl) {
+                if (completeVerificationUrl.isValid()) {
+                    QDesktopServices::openUrl(completeVerificationUrl);
+                } else {
+                    qDebug() << "The code to use:" << userCode;
+                    QDesktopServices::openUrl(verificationUrl);
+                }
+    });
+
+    //! [deviceflow-handle-errors]
+    connect(&m_deviceFlow, &QAbstractOAuth::requestFailed, this, [](QAbstractOAuth::Error error) {
+        Q_UNUSED(error);
+        // Handle error
+    });
+
+    connect(&m_deviceFlow, &QAbstractOAuth2::errorOccurred, this,
+        [](const QString &error, const QString &errorDescription, const QUrl &uri) {
+            // Check server reported error details if needed
+            Q_UNUSED(error);
+            Q_UNUSED(errorDescription);
+            Q_UNUSED(uri);
+        }
+    );
+    //! [deviceflow-handle-errors]
+
+    //! [deviceflow-handle-grant]
+    connect(&m_deviceFlow, &QAbstractOAuth::granted, this, [this](){
+        // Here we use QNetworkRequestFactory to store the access token
+        m_api.setBearerToken(m_deviceFlow.token().toLatin1());
+    });
+    m_deviceFlow.grant();
+    //! [deviceflow-handle-grant]
+}
+
 UriSchemeExample::UriSchemeExample()
 {
 #ifdef QT_WEBENGINEWIDGETS_LIB

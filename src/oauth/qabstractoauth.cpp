@@ -104,6 +104,14 @@ QT_BEGIN_NAMESPACE
     has not verified the supplied callback URI in the request. This
     usually happens when the provided callback does not match with
     the callback supplied during client registration.
+
+    \value [since 6.9] ClientError          An error that is attributable
+    to the client application (e.g. missing configuration or attempting a
+    request in a state where it's not allowed). Currently used by
+    \l {QOAuth2DeviceAuthorizationFlow}.
+
+    \value [since 6.9] ExpiredError         A token has expired.
+    Currently used by \l {QOAuth2DeviceAuthorizationFlow}.
 */
 
 // ### Qt 7 remove ContentType when removing support for HTTP methods (QTBUG-124329)

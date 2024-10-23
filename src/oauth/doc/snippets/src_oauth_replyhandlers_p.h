@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 #include <QtNetworkAuth/qoauth2authorizationcodeflow.h>
+#include <QtNetworkAuth/qoauth2deviceauthorizationflow.h>
 #include <QtNetworkAuth/qoauthhttpserverreplyhandler.h>
 #include <QtNetworkAuth/qoauthurischemereplyhandler.h>
 
@@ -42,6 +43,7 @@ public:
     void setupSystemBrowser();
     void setupSystemBrowserLocalHostHttps();
     void setupWebEngineWidgets();
+    void setupDeviceFlow();
 
     void readOIDCConfiguration(const QUrl &url);
     void readJSONWebKeySet(const QUrl &url);
@@ -60,6 +62,10 @@ private:
     QMainWindow mainWindow;
 #endif
     std::optional<QJsonDocument> m_jwks;
+
+    //! [deviceflow-variables]
+    QOAuth2DeviceAuthorizationFlow m_deviceFlow;
+    //! [deviceflow-variables]
 
     //! [oidc-id-token-struct]
     struct IDToken {

@@ -23,9 +23,11 @@ int main(int argc, char *argv[])
     QCommandLineOption agentOption({u"agent"_s},
                     u"Whether to use WebEngine 'widgets', WebEngine 'qml', or 'system' Browser"_s,
                     u"Agent"_s, u"system"_s);
-    QCommandLineOption schemeOption({u"scheme"_s}, u"Whether to use 'http', 'https', "
-                                    "'https-localhost', or 'custom'"_s, u"URI scheme"_s, u"http"_s);
+    QCommandLineOption schemeOption({u"scheme"_s}, u"Whether to use 'http', 'https', 'custom', "_s
+                                                   u"'deviceflow', or 'https-localhost'"_s,
+                                                   u"URI scheme"_s, u"http"_s);
     parser.addOptions({{agentOption}, {schemeOption}});
+    parser.addHelpOption();
     parser.process(app);
     auto agent = parser.value(agentOption);
     auto scheme = parser.value(schemeOption);
@@ -53,6 +55,8 @@ int main(int argc, char *argv[])
         uriSchemeExample.setupWebEngineWidgetsHttps();
     } else if (agent == u"widgets"_s && scheme == u"http"_s) {
         httpExample.setupWebEngineWidgets();
+    } else if (scheme == u"deviceflow"_s) {
+        httpExample.setupDeviceFlow();
     } else {
         qDebug() << "Currently unsupported option combination:" << agent << scheme;
         return EXIT_FAILURE;
