@@ -145,7 +145,7 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished(const QV
     using Key = QAbstractOAuth2Private::OAuth2KeyString;
 
     if (values.contains(Key::error)) {
-        _q_accessTokenRequestFailed(QAbstractOAuth::Error::ServerError,
+        _q_tokenRequestFailed(QAbstractOAuth::Error::ServerError,
                                     values.value(Key::error).toString());
         return;
     }
@@ -160,7 +160,7 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished(const QV
         q->setRefreshToken(values.value(Key::refreshToken).toString());
 
     if (accessToken.isEmpty()) {
-        _q_accessTokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
+        _q_tokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
                                     "Access token not received"_L1);
         return;
     }
@@ -193,7 +193,7 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished(const QV
     const QString receivedIdToken = values.value(Key::idToken).toString();
     if (grantedScope.contains("openid"_L1) && receivedIdToken.isEmpty()) {
         setIdToken({});
-        _q_accessTokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
+        _q_tokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
                                     "ID token not received"_L1);
         return;
     }
@@ -217,23 +217,6 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished(const QV
     setExtraTokens(newExtraTokens);
 
     setStatus(QAbstractOAuth::Status::Granted);
-}
-
-void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFailed(QAbstractOAuth::Error error,
-                                                                      const QString& errorString)
-{
-    Q_Q(QOAuth2AuthorizationCodeFlow);
-    qCWarning(loggingCategory) << "Token request failed:" << errorString;
-    // If we were refreshing, reset status to Granted if we have an access token.
-    // The access token might still be valid, and even if it wouldn't be,
-    // refreshing can be attempted again.
-    if (q->status() == QAbstractOAuth::Status::RefreshingToken) {
-        if (!q->token().isEmpty())
-            setStatus(QAbstractOAuth::Status::Granted);
-        else
-            setStatus(QAbstractOAuth::Status::NotAuthenticated);
-    }
-    emit q->requestFailed(error);
 }
 
 void QOAuth2AuthorizationCodeFlowPrivate::_q_authenticate(QNetworkReply *reply,
@@ -535,7 +518,7 @@ void QOAuth2AuthorizationCodeFlow::refreshAccessToken()
                             d, &QOAuth2AuthorizationCodeFlowPrivate::_q_authenticate,
                             Qt::UniqueConnection);
     QObjectPrivate::connect(handler, &QAbstractOAuthReplyHandler::tokenRequestErrorOccurred,
-                            d, &QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFailed,
+                            d, &QOAuth2AuthorizationCodeFlowPrivate::_q_tokenRequestFailed,
                             Qt::UniqueConnection);
 }
 
@@ -638,7 +621,7 @@ void QOAuth2AuthorizationCodeFlow::requestAccessToken(const QString &code)
                             Qt::UniqueConnection);
     QObjectPrivate::connect(handler,
                             &QAbstractOAuthReplyHandler::tokenRequestErrorOccurred,
-                            d, &QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFailed,
+                            d, &QOAuth2AuthorizationCodeFlowPrivate::_q_tokenRequestFailed,
                             Qt::UniqueConnection);
 }
 

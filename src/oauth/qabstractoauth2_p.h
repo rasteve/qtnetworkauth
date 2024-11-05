@@ -49,6 +49,7 @@ public:
     QNetworkRequest createRequest(QUrl url, const QVariantMap *parameters = nullptr);
     bool authorizationShouldIncludeNonce() const;
     void setIdToken(const QString &token);
+    void _q_tokenRequestFailed(QAbstractOAuth::Error error, const QString& errorString);
 
     struct CallerInfo {
         QPointer<const QObject> contextObject = nullptr;

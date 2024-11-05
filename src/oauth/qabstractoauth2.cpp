@@ -427,6 +427,23 @@ void QAbstractOAuth2Private::setIdToken(const QString &token)
     emit q->idTokenChanged(idToken);
 }
 
+void QAbstractOAuth2Private::_q_tokenRequestFailed(QAbstractOAuth::Error error,
+                                                const QString& errorString)
+{
+    Q_Q(QAbstractOAuth);
+    qCWarning(loggingCategory) << "Token request failed:" << errorString;
+    // If we were refreshing, reset status to Granted if we have an access token.
+    // The access token might still be valid, and even if it wouldn't be,
+    // refreshing can be attempted again.
+    if (q->status() == QAbstractOAuth::Status::RefreshingToken) {
+        if (!q->token().isEmpty())
+            setStatus(QAbstractOAuth::Status::Granted);
+        else
+            setStatus(QAbstractOAuth::Status::NotAuthenticated);
+    }
+    emit q->requestFailed(error);
+}
+
 bool QAbstractOAuth2Private::verifyThreadAffinity(const QObject *contextObject)
 {
     Q_Q(QAbstractOAuth2);
