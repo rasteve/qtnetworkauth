@@ -139,86 +139,6 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_handleCallback(const QVariantMap &d
     q->requestAccessToken(code);
 }
 
-void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished(const QVariantMap &values)
-{
-    Q_Q(QOAuth2AuthorizationCodeFlow);
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
-
-    if (values.contains(Key::error)) {
-        _q_tokenRequestFailed(QAbstractOAuth::Error::ServerError,
-                                    values.value(Key::error).toString());
-        return;
-    }
-
-    bool ok;
-    const QString accessToken = values.value(Key::accessToken).toString();
-    tokenType = values.value(Key::tokenType).toString();
-    int expiresIn = values.value(Key::expiresIn).toInt(&ok);
-    if (!ok)
-        expiresIn = -1;
-    if (values.value(Key::refreshToken).isValid())
-        q->setRefreshToken(values.value(Key::refreshToken).toString());
-
-    if (accessToken.isEmpty()) {
-        _q_tokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
-                                    "Access token not received"_L1);
-        return;
-    }
-    q->setToken(accessToken);
-
-    // RFC 6749 section 5.1 https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
-    // If the requested scope and granted scopes differ, server is REQUIRED to return
-    // the scope. If OTOH the scopes match, the server MAY omit the scope in the response,
-    // in which case we assume that the granted scope matches the requested scope.
-    //
-    // Note: 'scope' variable has two roles: requested scope, and later granted scope.
-    // Therefore 'scope' needs to be set if the granted scope differs from 'scope'.
-    const QString receivedGrantedScope = values.value(Key::scope).toString();
-    const QStringList splitGrantedScope = receivedGrantedScope.split(" "_L1, Qt::SkipEmptyParts);
-    if (splitGrantedScope.isEmpty()) {
-        setGrantedScope(requestedScope);
-    } else {
-        setGrantedScope(splitGrantedScope);
-#if QT_DEPRECATED_SINCE(6, 11)
-        if (receivedGrantedScope != scope) {
-            scope = receivedGrantedScope;
-            QT_IGNORE_DEPRECATIONS(Q_EMIT q->scopeChanged(scope);)
-        }
-#endif
-    }
-
-    // An id_token must be included if this was an OIDC request
-    // https://openid.net/specs/openid-connect-core-1_0-final.html#AuthRequest (cf. 'scope')
-    // https://openid.net/specs/openid-connect-core-1_0-final.html#TokenResponse
-    const QString receivedIdToken = values.value(Key::idToken).toString();
-    if (grantedScope.contains("openid"_L1) && receivedIdToken.isEmpty()) {
-        setIdToken({});
-        _q_tokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
-                                    "ID token not received"_L1);
-        return;
-    }
-    setIdToken(receivedIdToken);
-
-    const QDateTime currentDateTime = QDateTime::currentDateTime();
-    if (expiresIn > 0 && currentDateTime.secsTo(expiresAt) != expiresIn) {
-        expiresAt = currentDateTime.addSecs(expiresIn);
-        Q_EMIT q->expirationAtChanged(expiresAt);
-    }
-
-    QVariantMap copy(values);
-    copy.remove(Key::accessToken);
-    copy.remove(Key::expiresIn);
-    copy.remove(Key::refreshToken);
-    copy.remove(Key::scope);
-    copy.remove(Key::tokenType);
-    copy.remove(Key::idToken);
-    QVariantMap newExtraTokens = extraTokens;
-    newExtraTokens.insert(copy);
-    setExtraTokens(newExtraTokens);
-
-    setStatus(QAbstractOAuth::Status::Granted);
-}
-
 void QOAuth2AuthorizationCodeFlowPrivate::_q_authenticate(QNetworkReply *reply,
                                                           QAuthenticator *authenticator)
 {
@@ -511,7 +431,7 @@ void QOAuth2AuthorizationCodeFlow::refreshAccessToken()
             [handler, reply]() { handler->networkReplyFinished(reply); });
     connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
     QObjectPrivate::connect(handler, &QAbstractOAuthReplyHandler::tokensReceived, d,
-                            &QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished,
+                            &QOAuth2AuthorizationCodeFlowPrivate::_q_tokenRequestFinished,
                             Qt::UniqueConnection);
     QObjectPrivate::connect(d->networkAccessManager(),
                             &QNetworkAccessManager::authenticationRequired,
@@ -613,7 +533,7 @@ void QOAuth2AuthorizationCodeFlow::requestAccessToken(const QString &code)
                      [handler, reply] { handler->networkReplyFinished(reply); });
     connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
     QObjectPrivate::connect(handler, &QAbstractOAuthReplyHandler::tokensReceived, d,
-                            &QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished,
+                            &QOAuth2AuthorizationCodeFlowPrivate::_q_tokenRequestFinished,
                             Qt::UniqueConnection);
     QObjectPrivate::connect(d->networkAccessManager(),
                             &QNetworkAccessManager::authenticationRequired,

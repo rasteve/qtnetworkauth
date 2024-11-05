@@ -39,7 +39,6 @@ public:
                                         QNetworkAccessManager *manager = nullptr);
 
     void _q_handleCallback(const QVariantMap &data);
-    void _q_accessTokenRequestFinished(const QVariantMap &values);
     void _q_authenticate(QNetworkReply *reply, QAuthenticator *authenticator);
 
     QByteArray createPKCEChallenge();
@@ -50,7 +49,6 @@ public:
     QByteArray pkceCodeVerifier;
 
     QUrl accessTokenUrl;
-    QString tokenType;
     QPointer<QNetworkReply> currentReply;
 };
 

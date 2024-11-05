@@ -50,6 +50,7 @@ public:
     bool authorizationShouldIncludeNonce() const;
     void setIdToken(const QString &token);
     void _q_tokenRequestFailed(QAbstractOAuth::Error error, const QString& errorString);
+    void _q_tokenRequestFinished(const QVariantMap &values);
 
     struct CallerInfo {
         QPointer<const QObject> contextObject = nullptr;
@@ -74,6 +75,7 @@ public:
     QAbstractOAuth2::NonceMode nonceMode = QAbstractOAuth2::NonceMode::Automatic;
     QString nonce;
     QString idToken;
+    QString tokenType;
 #ifndef QT_NO_SSL
     std::optional<QSslConfiguration> sslConfiguration;
 #endif
