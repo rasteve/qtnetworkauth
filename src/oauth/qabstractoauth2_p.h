@@ -52,6 +52,12 @@ public:
     void _q_tokenRequestFailed(QAbstractOAuth::Error error, const QString& errorString);
     void _q_tokenRequestFinished(const QVariantMap &values);
     bool handleRfcErrorResponseIfPresent(const QVariantMap &data);
+    struct RequestAndBody
+    {
+        QNetworkRequest request;
+        QByteArray body;
+    };
+    [[nodiscard]] RequestAndBody createRefreshRequestAndBody(const QUrl &url);
 
     struct CallerInfo {
         QPointer<const QObject> contextObject = nullptr;

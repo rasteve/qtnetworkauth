@@ -384,29 +384,8 @@ void QOAuth2AuthorizationCodeFlow::refreshAccessToken()
         return;
     }
 
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
-
-    QMultiMap<QString, QVariant> parameters;
-    QNetworkRequest request(d->accessTokenUrl);
-#ifndef QT_NO_SSL
-    if (d->sslConfiguration && !d->sslConfiguration->isNull())
-        request.setSslConfiguration(*d->sslConfiguration);
-#endif
-    QUrlQuery query;
-    parameters.insert(Key::grantType, QStringLiteral("refresh_token"));
-    parameters.insert(Key::refreshToken, d->refreshToken);
-    parameters.insert(Key::clientIdentifier, d->clientIdentifier);
-    parameters.insert(Key::clientSharedSecret, d->clientIdentifierSharedKey);
-    if (d->modifyParametersFunction)
-        d->modifyParametersFunction(Stage::RefreshingAccessToken, &parameters);
-    query = QAbstractOAuthPrivate::createQuery(parameters);
-    request.setHeader(QNetworkRequest::ContentTypeHeader,
-                      QStringLiteral("application/x-www-form-urlencoded"));
-
-    d->callTokenRequestModifier(request, QAbstractOAuth::Stage::RefreshingAccessToken);
-
-    const QString data = query.toString(QUrl::FullyEncoded);
-    d->currentReply = d->networkAccessManager()->post(request, data.toUtf8());
+    const auto [request, body] = d->createRefreshRequestAndBody(d->accessTokenUrl);
+    d->currentReply = d->networkAccessManager()->post(request, body);
     setStatus(Status::RefreshingToken);
 
     QNetworkReply *reply = d->currentReply.data();

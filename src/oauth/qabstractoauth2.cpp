@@ -549,6 +549,36 @@ bool QAbstractOAuth2Private::handleRfcErrorResponseIfPresent(const QVariantMap &
     return false;
 }
 
+QAbstractOAuth2Private::RequestAndBody QAbstractOAuth2Private::createRefreshRequestAndBody(
+    const QUrl &url)
+{
+    using Key = QAbstractOAuth2Private::OAuth2KeyString;
+
+    RequestAndBody result;
+    result.request.setUrl(url);
+
+    QMultiMap<QString, QVariant> parameters;
+#ifndef QT_NO_SSL
+    if (sslConfiguration && !sslConfiguration->isNull())
+        result.request.setSslConfiguration(*sslConfiguration);
+#endif
+    QUrlQuery query;
+    parameters.insert(Key::grantType, QStringLiteral("refresh_token"));
+    parameters.insert(Key::refreshToken, refreshToken);
+    parameters.insert(Key::clientIdentifier, clientIdentifier);
+    parameters.insert(Key::clientSharedSecret, clientIdentifierSharedKey);
+    if (modifyParametersFunction)
+        modifyParametersFunction(QAbstractOAuth::Stage::RefreshingAccessToken, &parameters);
+    query = QAbstractOAuthPrivate::createQuery(parameters);
+    result.request.setHeader(QNetworkRequest::ContentTypeHeader,
+                      QStringLiteral("application/x-www-form-urlencoded"));
+
+    callTokenRequestModifier(result.request, QAbstractOAuth::Stage::RefreshingAccessToken);
+    result.body = query.toString(QUrl::FullyEncoded).toUtf8();
+
+    return result;
+}
+
 bool QAbstractOAuth2Private::verifyThreadAffinity(const QObject *contextObject)
 {
     Q_Q(QAbstractOAuth2);
