@@ -524,6 +524,31 @@ void QAbstractOAuth2Private::_q_tokenRequestFinished(const QVariantMap &values)
     setStatus(QAbstractOAuth::Status::Granted);
 }
 
+bool QAbstractOAuth2Private::handleRfcErrorResponseIfPresent(const QVariantMap &data)
+{
+    Q_Q(QAbstractOAuth2);
+    using Key = QAbstractOAuth2Private::OAuth2KeyString;
+    const QString error = data.value(Key::error).toString();
+
+    if (error.size()) {
+        // RFC 6749, Section 5.2 Error Response
+        const QString uri = data.value(Key::errorUri).toString();
+        const QString description = data.value(Key::errorDescription).toString();
+        qCWarning(loggingCategory, "Authorization stage: AuthenticationError: %s(%s): %s",
+                  qPrintable(error), qPrintable(uri), qPrintable(description));
+
+#if QT_DEPRECATED_SINCE(6, 13)
+        QT_IGNORE_DEPRECATIONS(Q_EMIT q->error(error, description, uri);)
+#endif
+        Q_EMIT q->errorOccurred(error, description, uri);
+
+        // Emit also requestFailed() so that it is a signal for all errors
+        emit q->requestFailed(QAbstractOAuth::Error::ServerError);
+        return true;
+    }
+    return false;
+}
+
 bool QAbstractOAuth2Private::verifyThreadAffinity(const QObject *contextObject)
 {
     Q_Q(QAbstractOAuth2);

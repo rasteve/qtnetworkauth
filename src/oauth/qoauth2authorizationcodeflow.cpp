@@ -93,32 +93,16 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_handleCallback(const QVariantMap &d
 
     Q_ASSERT(!state.isEmpty());
 
-    const QString error = data.value(Key::error).toString();
-    const QString code = data.value(Key::code).toString();
-    const QString receivedState = fromUrlFormEncoding(data.value(Key::state).toString());
-
-    if (error.size()) {
-        // RFC 6749, Section 5.2 Error Response
-        const QString uri = data.value(Key::errorUri).toString();
-        const QString description = data.value(Key::errorDescription).toString();
-        qCWarning(loggingCategory, "Authorization stage: AuthenticationError: %s(%s): %s",
-                  qPrintable(error), qPrintable(uri), qPrintable(description));
-
-#if QT_DEPRECATED_SINCE(6, 13)
-        QT_IGNORE_DEPRECATIONS(Q_EMIT q->error(error, description, uri);)
-#endif
-        Q_EMIT q->errorOccurred(error, description, uri);
-
-        // Emit also requestFailed() so that it is a signal for all errors
-        emit q->requestFailed(QAbstractOAuth::Error::ServerError);
+    if (handleRfcErrorResponseIfPresent(data))
         return;
-    }
 
+    const QString code = data.value(Key::code).toString();
     if (code.isEmpty()) {
         qCWarning(loggingCategory, "Authorization stage: Code not received");
         emit q->requestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError);
         return;
     }
+    const QString receivedState = fromUrlFormEncoding(data.value(Key::state).toString());
     if (receivedState.isEmpty()) {
         qCWarning(loggingCategory, "Authorization stage: State not received");
         emit q->requestFailed(QAbstractOAuth::Error::ServerError);

@@ -51,6 +51,7 @@ public:
     void setIdToken(const QString &token);
     void _q_tokenRequestFailed(QAbstractOAuth::Error error, const QString& errorString);
     void _q_tokenRequestFinished(const QVariantMap &values);
+    bool handleRfcErrorResponseIfPresent(const QVariantMap &data);
 
     struct CallerInfo {
         QPointer<const QObject> contextObject = nullptr;
