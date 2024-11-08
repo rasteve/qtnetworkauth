@@ -86,7 +86,7 @@ struct ReplyHandler : QAbstractOAuthReplyHandler
 void tst_OAuth2::initTestCase()
 {
     // QLoggingCategory::setFilterRules(QStringLiteral("qt.networkauth* = true"));
-    testDataDir = QFileInfo(QFINDTESTDATA("certs")).absolutePath();
+    testDataDir = QFileInfo(QFINDTESTDATA("../shared/certs")).absolutePath();
     if (testDataDir.isEmpty())
         testDataDir = QCoreApplication::applicationDirPath();
     if (!testDataDir.endsWith(QLatin1String("/")))

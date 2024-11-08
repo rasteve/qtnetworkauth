@@ -7,7 +7,7 @@
 ## tst_oauth2 Test:
 #####################################################################
 
-list(APPEND test_data "certs")
+list(APPEND test_data "../shared/certs")
 
 qt_internal_add_test(tst_oauth2
     SOURCES
