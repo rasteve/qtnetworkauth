@@ -487,7 +487,7 @@ void QOAuth2AuthorizationCodeFlow::requestAccessToken(const QString &code)
 
     const QString data = query.toString(QUrl::FullyEncoded);
 
-    d->callTokenRequestModifier(request, QAbstractOAuth::Stage::RequestingAccessToken);
+    d->callNetworkRequestModifier(request, QAbstractOAuth::Stage::RequestingAccessToken);
 
     QNetworkReply *reply = d->networkAccessManager()->post(request, data.toUtf8());
     d->currentReply = reply;

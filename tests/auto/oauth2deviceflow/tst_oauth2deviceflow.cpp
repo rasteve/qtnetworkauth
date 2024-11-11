@@ -223,7 +223,7 @@ do { \
     QTRY_COMPARE(receivedTokenRequests.size(), 1); \
     QCOMPARE(receivedTokenRequests.at(0).headers.value("test-header-name"_ba), VALUE_SET); \
     QTRY_COMPARE(oauth2.status(), Status::Granted); \
-    oauth2.clearTokenRequestModifier(); \
+    oauth2.clearNetworkRequestModifier(); \
 } while (false) \
 
 #define TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(VALUE_SET) \
@@ -243,7 +243,7 @@ do { \
     QTRY_COMPARE(oauth2.status(), Status::Granted); \
     QTRY_COMPARE(receivedTokenRequests.size(), 1); \
     QVERIFY(receivedTokenRequests.at(0).headers.value("test-header-name"_ba).isEmpty()); \
-    oauth2.clearTokenRequestModifier(); \
+    oauth2.clearNetworkRequestModifier(); \
 } while (false) \
 
 void tst_OAuth2DeviceFlow::modifyTokenRequests()
@@ -276,35 +276,35 @@ void tst_OAuth2DeviceFlow::modifyTokenRequests()
     std::function<void(QNetworkRequest &, Stage)> modifierFunc = modifierLambda;
 
     // Lambda with a context object
-    oauth2.setTokenRequestModifier(context.get(), modifierLambda);
+    oauth2.setNetworkRequestModifier(context.get(), modifierLambda);
     TEST_MODIFY_REQUEST_WITH_MODIFIER(stagesReceivedByModifier,
                                       valueToSet, "lambda_with_context");
 
     // Test that the modifier will be cleared
-    oauth2.clearTokenRequestModifier();
+    oauth2.clearNetworkRequestModifier();
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet);
 
     // Lambda without a context object
     QTest::ignoreMessage(QtWarningMsg, nullContextWarning);
-    oauth2.setTokenRequestModifier(nullptr, modifierLambda);
+    oauth2.setNetworkRequestModifier(nullptr, modifierLambda);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet);
 
     // std::function with a context object
-    oauth2.setTokenRequestModifier(context.get(), modifierFunc);
+    oauth2.setNetworkRequestModifier(context.get(), modifierFunc);
     TEST_MODIFY_REQUEST_WITH_MODIFIER(stagesReceivedByModifier, valueToSet, "func_with_context");
 
     // PMF with context object
-    oauth2.setTokenRequestModifier(context.get(), &RequestModifier::handleRequestModification);
+    oauth2.setNetworkRequestModifier(context.get(), &RequestModifier::handleRequestModification);
     TEST_MODIFY_REQUEST_WITH_MODIFIER(context->stagesReceivedByModifier,
                                       context->valueToSet, "pmf_with_context");
 
     // PMF without context object
     QTest::ignoreMessage(QtWarningMsg, nullContextWarning);
-    oauth2.setTokenRequestModifier(nullptr, &RequestModifier::handleRequestModification);
+    oauth2.setNetworkRequestModifier(nullptr, &RequestModifier::handleRequestModification);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(context->valueToSet);
 
     // Destroy context object => no callback (or crash)
-    oauth2.setTokenRequestModifier(context.get(), modifierLambda);
+    oauth2.setNetworkRequestModifier(context.get(), modifierLambda);
     context.reset(nullptr);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet);
 
@@ -312,16 +312,16 @@ void tst_OAuth2DeviceFlow::modifyTokenRequests()
     QThread thread;
     QObject objectInWrongThread;
     // Initially context object is in correct thread
-    oauth2.setTokenRequestModifier(&objectInWrongThread, modifierLambda);
+    oauth2.setNetworkRequestModifier(&objectInWrongThread, modifierLambda);
     // Move to wrong thread, verify we get warnings when it's time to call the callback
     objectInWrongThread.moveToThread(&thread);
     QTest::ignoreMessage(QtWarningMsg, wrongThreadWarning);
     oauth2.grant();
     QTRY_COMPARE(oauth2.status(), Status::Granted);
     // Now the context object is in wrong thread when attempting to set the modifier
-    oauth2.clearTokenRequestModifier();
+    oauth2.clearNetworkRequestModifier();
     QTest::ignoreMessage(QtWarningMsg, wrongThreadWarning);
-    oauth2.setTokenRequestModifier(&objectInWrongThread, modifierLambda);
+    oauth2.setNetworkRequestModifier(&objectInWrongThread, modifierLambda);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet);
 }
 

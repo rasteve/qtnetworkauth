@@ -42,12 +42,12 @@ class Q_OAUTH_EXPORT QAbstractOAuth2 : public QAbstractOAuth
     Q_PROPERTY(QString nonce READ nonce WRITE setNonce NOTIFY nonceChanged)
     Q_PROPERTY(QString idToken READ idToken NOTIFY idTokenChanged)
 
-    using TokenRequestModifierPrototype = void(*)(QNetworkRequest&, QAbstractOAuth::Stage);
+    using NetworkRequestModifierPrototype = void(*)(QNetworkRequest&, QAbstractOAuth::Stage);
     template <typename Functor>
     using ContextTypeForFunctor = typename QtPrivate::ContextTypeForFunctor<Functor>::ContextType;
     template <typename Functor>
     using if_compatible_callback = std::enable_if_t<
-        QtPrivate::AreFunctionsCompatible<TokenRequestModifierPrototype, Functor>::value, bool>;
+        QtPrivate::AreFunctionsCompatible<NetworkRequestModifierPrototype, Functor>::value, bool>;
 
 public:
     enum class NonceMode : quint8 {
@@ -149,14 +149,14 @@ public:
                         const QByteArray &body = QByteArray()) override;
 
     template <typename Functor, if_compatible_callback<Functor> = true>
-    void setTokenRequestModifier(const ContextTypeForFunctor<Functor> *context,
+    void setNetworkRequestModifier(const ContextTypeForFunctor<Functor> *context,
                                  Functor &&callback) {
-        setTokenRequestModifierImpl(
+        setNetworkRequestModifierImpl(
             context,
-            QtPrivate::makeCallableObject<TokenRequestModifierPrototype>(
+            QtPrivate::makeCallableObject<NetworkRequestModifierPrototype>(
                 std::forward<Functor>(callback)));
     }
-    void clearTokenRequestModifier();
+    void clearNetworkRequestModifier();
 
 Q_SIGNALS:
 #if QT_DEPRECATED_SINCE(6, 11)
@@ -191,7 +191,7 @@ protected:
     void setResponseType(const QString &responseType);
 
 private:
-    void setTokenRequestModifierImpl(const QObject* context, QtPrivate::QSlotObjectBase *slot);
+    void setNetworkRequestModifierImpl(const QObject* context, QtPrivate::QSlotObjectBase *slot);
     Q_DECLARE_PRIVATE(QAbstractOAuth2)
 };
 

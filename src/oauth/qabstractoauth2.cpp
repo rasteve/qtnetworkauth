@@ -227,13 +227,13 @@ using namespace Qt::StringLiterals;
 */
 
 /*!
-    \fn template<typename Functor, QAbstractOAuth2::if_compatible_callback<Functor>> void QAbstractOAuth2::setTokenRequestModifier(
+    \fn template<typename Functor, QAbstractOAuth2::if_compatible_callback<Functor>> void QAbstractOAuth2::setNetworkRequestModifier(
                         const ContextTypeForFunctor<Functor> *context,
                         Functor &&callback)
     \since 6.9
 
     Sets the network request modification function to \a callback.
-    This function is used to customize the token requests sent
+    This function is used to customize the network requests sent
     to the server.
 
     \a callback has to implement the signature
@@ -241,8 +241,9 @@ using namespace Qt::StringLiterals;
     QNetworkRequest can be directly modified, and it is used right after
     the callback finishes. \a callback can be a function pointer, lambda,
     member function, or any callable object. The provided
-    QAbstractOAuth::Stage can be used to check if the request is an
-    access token request or an access token refresh request.
+    QAbstractOAuth::Stage can be used to check to which stage
+    the request relates to (token request, token refresh request,
+    or authorization request in case of QOAuth2DeviceAuthorizationFlow).
 
     \a context controls the lifetime of the calls, and prevents
     access to de-allocated resources in case \a context is destroyed.
@@ -253,7 +254,7 @@ using namespace Qt::StringLiterals;
     are used immediately, \a context must reside in the same
     thread as the QAbstractOAuth2 instance.
 
-    \sa clearTokenRequestModifier(), QNetworkRequest
+    \sa clearNetworkRequestModifier(), QNetworkRequest
 */
 
 /*!
@@ -582,7 +583,7 @@ QAbstractOAuth2Private::RequestAndBody QAbstractOAuth2Private::createRefreshRequ
     result.request.setHeader(QNetworkRequest::ContentTypeHeader,
                       QStringLiteral("application/x-www-form-urlencoded"));
 
-    callTokenRequestModifier(result.request, QAbstractOAuth::Stage::RefreshingAccessToken);
+    callNetworkRequestModifier(result.request, QAbstractOAuth::Stage::RefreshingAccessToken);
     result.body = query.toString(QUrl::FullyEncoded).toUtf8();
 
     return result;
@@ -616,18 +617,18 @@ bool QAbstractOAuth2Private::verifyThreadAffinity(const QObject *contextObject)
     return true;
 }
 
-void QAbstractOAuth2Private::callTokenRequestModifier(QNetworkRequest &request,
+void QAbstractOAuth2Private::callNetworkRequestModifier(QNetworkRequest &request,
                                                        QAbstractOAuth::Stage stage)
 {
-    if (tokenRequestModifier.contextObject && tokenRequestModifier.slot) {
-        if (!verifyThreadAffinity(tokenRequestModifier.contextObject)) {
+    if (networkRequestModifier.contextObject && networkRequestModifier.slot) {
+        if (!verifyThreadAffinity(networkRequestModifier.contextObject)) {
             Q_Q(QAbstractOAuth2);
-            q->clearTokenRequestModifier();
+            q->clearNetworkRequestModifier();
             return;
         }
         void *argv[] = { nullptr, &request, &stage};
-        tokenRequestModifier.slot->call(
-            const_cast<QObject*>(tokenRequestModifier.contextObject.get()), argv);
+        networkRequestModifier.slot->call(
+            const_cast<QObject*>(networkRequestModifier.contextObject.get()), argv);
     }
 }
 
@@ -676,7 +677,7 @@ void QAbstractOAuth2::setResponseType(const QString &responseType)
     }
 }
 
-void QAbstractOAuth2::setTokenRequestModifierImpl(const QObject* context,
+void QAbstractOAuth2::setNetworkRequestModifierImpl(const QObject* context,
                                                    QtPrivate::QSlotObjectBase *slot)
 {
     Q_D(QAbstractOAuth2);
@@ -688,19 +689,19 @@ void QAbstractOAuth2::setTokenRequestModifierImpl(const QObject* context,
     if (!d->verifyThreadAffinity(context))
         return;
 
-    d->tokenRequestModifier.contextObject = context;
-    d->tokenRequestModifier.slot.reset(slot);
+    d->networkRequestModifier.contextObject = context;
+    d->networkRequestModifier.slot.reset(slot);
 }
 
 /*!
     Clears the network request modifier.
 
-    \sa setTokenRequestModifier()
+    \sa setNetworkRequestModifier()
 */
-void QAbstractOAuth2::clearTokenRequestModifier()
+void QAbstractOAuth2::clearNetworkRequestModifier()
 {
     Q_D(QAbstractOAuth2);
-    d->tokenRequestModifier = {nullptr, nullptr};
+    d->networkRequestModifier = {nullptr, nullptr};
 }
 
 /*!

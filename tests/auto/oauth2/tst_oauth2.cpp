@@ -294,7 +294,7 @@ public:
         QTRY_COMPARE(STAGE_RECEIVED, QAbstractOAuth::Stage::RefreshingAccessToken); \
         QTRY_COMPARE(valueReceivedByTokenServer, VALUE_SET); \
         QTRY_COMPARE(oauth2.status(), QAbstractOAuth::Status::Granted); \
-        oauth2.clearTokenRequestModifier(); \
+        oauth2.clearNetworkRequestModifier(); \
     } \
 
 #define TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(VALUE_SET) \
@@ -310,7 +310,7 @@ public:
         QCOMPARE(oauth2.status(), QAbstractOAuth::Status::RefreshingToken); \
         QTRY_COMPARE(oauth2.status(), QAbstractOAuth::Status::Granted); \
         QVERIFY(valueReceivedByTokenServer.isEmpty()); \
-        oauth2.clearTokenRequestModifier(); \
+        oauth2.clearNetworkRequestModifier(); \
     } \
 
 void tst_OAuth2::modifyTokenRequests()
@@ -351,34 +351,34 @@ void tst_OAuth2::modifyTokenRequests()
     std::function<void(QNetworkRequest &, QAbstractOAuth::Stage)> modifierFunc = modifierLambda;
 
     // Lambda with a context object
-    oauth2.setTokenRequestModifier(context.get(), modifierLambda);
+    oauth2.setNetworkRequestModifier(context.get(), modifierLambda);
     TEST_MODIFY_REQUEST_WITH_MODIFIER(stageReceivedByModifier, valueToSet, "lambda_with_context")
 
     // Test that the modifier will be cleared
-    oauth2.clearTokenRequestModifier();
+    oauth2.clearNetworkRequestModifier();
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet)
 
     // Lambda without a context object
     QTest::ignoreMessage(QtWarningMsg, nullContextWarning);
-    oauth2.setTokenRequestModifier(nullptr, modifierLambda);
+    oauth2.setNetworkRequestModifier(nullptr, modifierLambda);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet)
 
     // std::function with a context object
-    oauth2.setTokenRequestModifier(context.get(), modifierFunc);
+    oauth2.setNetworkRequestModifier(context.get(), modifierFunc);
     TEST_MODIFY_REQUEST_WITH_MODIFIER(stageReceivedByModifier, valueToSet, "func_with_context")
 
     // PMF with context object
-    oauth2.setTokenRequestModifier(context.get(), &RequestModifier::handleRequestModification);
+    oauth2.setNetworkRequestModifier(context.get(), &RequestModifier::handleRequestModification);
     TEST_MODIFY_REQUEST_WITH_MODIFIER(context->stageReceivedByModifier,
                                       context->valueToSet, "pmf_with_context")
 
     // PMF without context object
     QTest::ignoreMessage(QtWarningMsg, nullContextWarning);
-    oauth2.setTokenRequestModifier(nullptr, &RequestModifier::handleRequestModification);
+    oauth2.setNetworkRequestModifier(nullptr, &RequestModifier::handleRequestModification);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(context->valueToSet)
 
     // Destroy context object => no callback (or crash)
-    oauth2.setTokenRequestModifier(context.get(), modifierLambda);
+    oauth2.setNetworkRequestModifier(context.get(), modifierLambda);
     context.reset(nullptr);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet)
 
@@ -386,7 +386,7 @@ void tst_OAuth2::modifyTokenRequests()
     QThread thread;
     QObject objectInWrongThread;
     // Initially context object is in correct thread
-    oauth2.setTokenRequestModifier(&objectInWrongThread, modifierLambda);
+    oauth2.setNetworkRequestModifier(&objectInWrongThread, modifierLambda);
     // Move to wrong thread, verify we get warnings when it's time to call the callback
     objectInWrongThread.moveToThread(&thread);
     oauth2.grant();
@@ -394,9 +394,9 @@ void tst_OAuth2::modifyTokenRequests()
     replyHandler.emitCallbackReceived({{"code"_L1, "acode"_L1}, {"state"_L1, "a_state"_L1}});
     QTRY_COMPARE(oauth2.status(), QAbstractOAuth::Status::Granted);
     // Now the context object is in wrong thread when attempting to set the modifier
-    oauth2.clearTokenRequestModifier();
+    oauth2.clearNetworkRequestModifier();
     QTest::ignoreMessage(QtWarningMsg, wrongThreadWarning);
-    oauth2.setTokenRequestModifier(&objectInWrongThread, modifierLambda);
+    oauth2.setNetworkRequestModifier(&objectInWrongThread, modifierLambda);
     TEST_MODIFY_REQUEST_WITHOUT_MODIFIER(valueToSet)
 
     // These must not compile

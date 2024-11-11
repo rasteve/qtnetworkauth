@@ -70,8 +70,8 @@ public:
         QPointer<const QObject> contextObject = nullptr;
         QtPrivate::SlotObjUniquePtr slot;
     };
-    CallerInfo tokenRequestModifier;
-    void callTokenRequestModifier(QNetworkRequest &request, QAbstractOAuth::Stage stage);
+    CallerInfo networkRequestModifier;
+    void callNetworkRequestModifier(QNetworkRequest &request, QAbstractOAuth::Stage stage);
     bool verifyThreadAffinity(const QObject *contextObject);
 
     QString clientIdentifierSharedKey;

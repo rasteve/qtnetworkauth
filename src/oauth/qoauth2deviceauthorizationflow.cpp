@@ -464,7 +464,7 @@ void QOAuth2DeviceAuthorizationFlowPrivate::pollTokens()
     if (sslConfiguration && !sslConfiguration->isNull())
         request.setSslConfiguration(*sslConfiguration);
 #endif
-    callTokenRequestModifier(request, Stage::RequestingAccessToken);
+    callNetworkRequestModifier(request, Stage::RequestingAccessToken);
 
     const QString data = query.toString(QUrl::FullyEncoded);
     currentTokenReply = network()->post(request, data.toUtf8(), q, [this](QRestReply &reply) {
@@ -700,7 +700,7 @@ void QOAuth2DeviceAuthorizationFlow::grant()
     if (d->sslConfiguration && !d->sslConfiguration->isNull())
         request.setSslConfiguration(*d->sslConfiguration);
 #endif
-    d->callTokenRequestModifier(request, Stage::RequestingAuthorization);
+    d->callNetworkRequestModifier(request, Stage::RequestingAuthorization);
 
     const QByteArray data = query.toString(QUrl::FullyEncoded).toUtf8();
     d->currentAuthorizationReply =
