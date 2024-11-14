@@ -211,6 +211,7 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_accessTokenRequestFinished(const QV
     copy.remove(Key::refreshToken);
     copy.remove(Key::scope);
     copy.remove(Key::tokenType);
+    copy.remove(Key::idToken);
     QVariantMap newExtraTokens = extraTokens;
     newExtraTokens.insert(copy);
     setExtraTokens(newExtraTokens);
