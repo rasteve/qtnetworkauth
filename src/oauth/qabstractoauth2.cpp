@@ -292,7 +292,7 @@ using namespace Qt::StringLiterals;
 */
 
 /*!
-    \deprecated [6.13] Use errorOccurred instead
+    \deprecated [6.13] Use serverReportedErrorOccurred instead
     \fn QAbstractOAuth2::error(const QString &error, const QString &errorDescription, const QUrl &uri)
 
     Signal emitted when the server responds to the authorization request with
@@ -303,11 +303,13 @@ using namespace Qt::StringLiterals;
     and \a uri is an optional URI containing more information about the error.
 
     \sa QAbstractOAuth::requestFailed()
-    \sa QAbstractOAuth2::errorOccurred()
+    \sa QAbstractOAuth2::serverReportedErrorOccurred()
 */
 
 /*!
-    \fn QAbstractOAuth2::errorOccurred(const QString &error, const QString &errorDescription, const QUrl &uri)
+    \fn QAbstractOAuth2::serverReportedErrorOccurred(const QString &error,
+                                                     const QString &errorDescription,
+                                                     const QUrl &uri)
     \since 6.9
 
     Signal emitted when the server responds to the authorization request with
@@ -317,7 +319,8 @@ using namespace Qt::StringLiterals;
     \a error is the name of the error; \a errorDescription describes the error
     and \a uri is an optional URI containing more information about the error.
 
-    \sa QAbstractOAuth::requestFailed()
+    To catch all errors, including these RFC defined errors, with a
+    single signal, use \l {QAbstractOAuth::requestFailed()}.
 */
 
 /*!
@@ -550,7 +553,7 @@ bool QAbstractOAuth2Private::handleRfcErrorResponseIfPresent(const QVariantMap &
 #if QT_DEPRECATED_SINCE(6, 13)
         QT_IGNORE_DEPRECATIONS(Q_EMIT q->error(error, description, uri);)
 #endif
-        Q_EMIT q->errorOccurred(error, description, uri);
+        Q_EMIT q->serverReportedErrorOccurred(error, description, uri);
 
         // Emit also requestFailed() so that it is a signal for all errors
         emit q->requestFailed(QAbstractOAuth::Error::ServerError);

@@ -711,10 +711,11 @@ void tst_OAuth2DeviceFlow::authorizationErrors()
 #if QT_DEPRECATED_SINCE(6, 13)
     QSignalSpy errorSpy(&oauth2, &QAbstractOAuth2::error);
 #endif
-    QSignalSpy errorOccurredSpy(&oauth2, &QAbstractOAuth2::errorOccurred);
+    QSignalSpy serverReportedErrorOccurredSpy(&oauth2,
+                                              &QAbstractOAuth2::serverReportedErrorOccurred);
     const auto clearSpies = [&](){
         requestFailedSpy.clear();
-        errorOccurredSpy.clear();
+        serverReportedErrorOccurredSpy.clear();
 #if QT_DEPRECATED_SINCE(6, 13)
         errorSpy.clear();
 #endif
@@ -737,16 +738,16 @@ void tst_OAuth2DeviceFlow::authorizationErrors()
 #if QT_DEPRECATED_SINCE(6, 13)
     QTRY_COMPARE(errorSpy.size(), 1);
 #endif
-    QTRY_COMPARE(errorOccurredSpy.size(), 1);
+    QTRY_COMPARE(serverReportedErrorOccurredSpy.size(), 1);
     QTRY_COMPARE(requestFailedSpy.size(), 1);
 #if QT_DEPRECATED_SINCE(6, 13)
     QCOMPARE(errorSpy.at(0).at(0).toString(), "an-error"_L1);
     QCOMPARE(errorSpy.at(0).at(1).toString(), "an-error-description"_L1);
     QCOMPARE(errorSpy.at(0).at(2).toString(), "an-error-uri"_L1);
 #endif
-    QCOMPARE(errorOccurredSpy.at(0).at(0).toString(), "an-error"_L1);
-    QCOMPARE(errorOccurredSpy.at(0).at(1).toString(), "an-error-description"_L1);
-    QCOMPARE(errorOccurredSpy.at(0).at(2).toString(), "an-error-uri"_L1);
+    QCOMPARE(serverReportedErrorOccurredSpy.at(0).at(0).toString(), "an-error"_L1);
+    QCOMPARE(serverReportedErrorOccurredSpy.at(0).at(1).toString(), "an-error-description"_L1);
+    QCOMPARE(serverReportedErrorOccurredSpy.at(0).at(2).toString(), "an-error-uri"_L1);
     QCOMPARE(requestFailedSpy.at(0).at(0).value<Error>(), Error::ServerError);
     QVERIFY(statusSpy.isEmpty());
     QCOMPARE(oauth2.status(), Status::NotAuthenticated);
@@ -764,7 +765,7 @@ void tst_OAuth2DeviceFlow::authorizationErrors()
 #if QT_DEPRECATED_SINCE(6, 13)
         QCOMPARE(errorSpy.size(), 0);
 #endif
-        QCOMPARE(errorOccurredSpy.size(), 0);
+        QCOMPARE(serverReportedErrorOccurredSpy.size(), 0);
         QVERIFY(statusSpy.isEmpty());
     };
 

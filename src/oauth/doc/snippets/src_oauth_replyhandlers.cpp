@@ -408,7 +408,7 @@ void HttpExample::setupDeviceFlow()
         // Handle error
     });
 
-    connect(&m_deviceFlow, &QAbstractOAuth2::errorOccurred, this,
+    connect(&m_deviceFlow, &QAbstractOAuth2::serverReportedErrorOccurred, this,
         [](const QString &error, const QString &errorDescription, const QUrl &uri) {
             // Check server reported error details if needed
             Q_UNUSED(error);

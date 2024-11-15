@@ -80,8 +80,8 @@ using Stage = QAbstractOAuth::Stage;
 
     Errors can be detected as follows:
     \snippet src_oauth_replyhandlers.cpp deviceflow-handle-errors
-    \l {QAbstractOAuth2::errorOccurred()} signal can  be used to get
-    information on specific RFC-defined errors.
+    \l {QAbstractOAuth2::serverReportedErrorOccurred()} signal can
+    be used to get information on specific RFC-defined errors.
     However, unlike \l {QAbstractOAuth::requestFailed()}, it doesn't
     cover errors such as network errors or client configuration errors.
 
@@ -329,7 +329,7 @@ void QOAuth2DeviceAuthorizationFlowPrivate::handleTokenErrorResponse(const QJson
 #if QT_DEPRECATED_SINCE(6, 13)
         QT_IGNORE_DEPRECATIONS(Q_EMIT q->error(error, description, uri);)
 #endif
-        Q_EMIT q->errorOccurred(error, description, uri);
+        Q_EMIT q->serverReportedErrorOccurred(error, description, uri);
         if (errorCode == "expired_token"_L1)
             tokenAcquisitionFailed(Error::ExpiredError, description);
         else
