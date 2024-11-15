@@ -1287,7 +1287,7 @@ void tst_OAuth2::extraTokens()
     // Conclude authorization stage without extra tokens
     oauth2.grant();
     replyHandler.emitCallbackReceived({{"code"_L1, "acode"_L1}, {"state"_L1, "a_state"_L1}});
-    QCOMPARE(extraTokensSpy.size(), 1); // 'state'
+    QCOMPARE(extraTokensSpy.size(), 0);
 
     // Conclude authorization stage with extra tokens
     extraTokensSpy.clear();
@@ -1297,8 +1297,7 @@ void tst_OAuth2::extraTokens()
     QTRY_COMPARE(extraTokensSpy.size(), 1);
     QVariantMap extraTokens = oauth2.extraTokens();
     QCOMPARE(extraTokens, extraTokensSpy.at(0).at(0).toMap());
-    QCOMPARE(extraTokens.size(), 2);
-    QCOMPARE(extraTokens.value("state"_L1).toString(), "a_state"_L1);
+    QCOMPARE(extraTokens.size(), 1);
     QCOMPARE(extraTokens.value(name1).toString(), value1);
 
     // Conclude token stage without additional extra tokens
@@ -1306,8 +1305,7 @@ void tst_OAuth2::extraTokens()
     replyHandler.emitTokensReceived({{"access_token"_L1, "at"_L1}});
     QCOMPARE(extraTokensSpy.size(), 0);
     extraTokens = oauth2.extraTokens();
-    QCOMPARE(extraTokens.size(), 2);
-    QCOMPARE(extraTokens.value("state"_L1).toString(), "a_state"_L1);
+    QCOMPARE(extraTokens.size(), 1);
     QCOMPARE(extraTokens.value(name1).toString(), value1);
 
     // Conclude token stage with additional extra tokens
@@ -1316,8 +1314,7 @@ void tst_OAuth2::extraTokens()
     QTRY_COMPARE(extraTokensSpy.size(), 1);
     extraTokens = oauth2.extraTokens();
     QCOMPARE(extraTokens, extraTokensSpy.at(0).at(0).toMap());
-    QCOMPARE(extraTokens.size(), 3);
-    QCOMPARE(extraTokens.value("state"_L1).toString(), "a_state"_L1);
+    QCOMPARE(extraTokens.size(), 2);
     QCOMPARE(extraTokens.value(name1).toString(), value1);
     QCOMPARE(extraTokens.value(name2).toString(), value2);
 }

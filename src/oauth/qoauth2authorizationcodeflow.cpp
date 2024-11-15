@@ -134,6 +134,7 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_handleCallback(const QVariantMap &d
 
     QVariantMap copy(data);
     copy.remove(Key::code);
+    copy.remove(Key::state);
     setExtraTokens(copy);
     q->requestAccessToken(code);
 }
