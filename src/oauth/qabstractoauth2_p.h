@@ -17,6 +17,7 @@
 
 #ifndef QT_NO_HTTP
 
+#include <chrono>
 #include <optional>
 
 #include <private/qabstractoauth_p.h>
@@ -24,6 +25,7 @@
 #include <QtNetworkAuth/qoauthglobal.h>
 #include <QtNetworkAuth/qabstractoauth2.h>
 
+#include <QtCore/qchronotimer.h>
 #include <QtCore/qurl.h>
 #include <QtCore/qstring.h>
 #include <QtCore/qpointer.h>
@@ -74,6 +76,9 @@ public:
     void callNetworkRequestModifier(QNetworkRequest &request, QAbstractOAuth::Stage stage);
     bool verifyThreadAffinity(const QObject *contextObject);
 
+    void initializeRefreshTimer();
+    void updateRefreshTimer();
+
     QString clientIdentifierSharedKey;
 #if QT_DEPRECATED_SINCE(6, 11)
     QString scope;
@@ -86,6 +91,9 @@ public:
     const QString bearerFormat = QStringLiteral("Bearer %1"); // Case sensitive
     QDateTime expiresAt;
     QString refreshToken;
+    std::chrono::seconds refreshThreshold = std::chrono::seconds::zero();
+    QChronoTimer refreshTimer;
+    bool autoRefresh = false;
     QAbstractOAuth2::NonceMode nonceMode = QAbstractOAuth2::NonceMode::Automatic;
     QString nonce;
     QString idToken;

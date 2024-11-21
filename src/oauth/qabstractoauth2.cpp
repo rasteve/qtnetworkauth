@@ -25,6 +25,7 @@
 QT_BEGIN_NAMESPACE
 
 using namespace Qt::StringLiterals;
+using namespace std::chrono_literals;
 
 /*!
     \class QAbstractOAuth2
@@ -292,6 +293,60 @@ using namespace Qt::StringLiterals;
 */
 
 /*!
+    \fn QAbstractOAuth2::accessTokenAboutToExpire()
+    \since 6.9
+    \brief The signal is emitted when the access token is about
+    to expire.
+
+    Emitting this signal requires that the access token has
+    a valid expiration time.
+
+    \sa refreshThreshold, autoRefresh
+*/
+
+/*!
+    \property QAbstractOAuth2::refreshThreshold
+    \since 6.9
+    \brief This property defines how far in advance
+    \l {accessTokenAboutToExpire()} signal is emitted relative
+    to the access token's expiration.
+
+    This property specifies the time interval (in seconds)
+    before the current access token’s expiration, when
+    \l {accessTokenAboutToExpire()} signal is emitted. The value
+    set for this property must be a positive duration.
+
+    This interval allows the application to refresh the token well
+    in advance, ensuring continuous authorization without interruptions.
+
+    If this property is not explicitly set, the threshold defaults to
+    5% of the token's remaining lifetime, but not less than 10 seconds ahead
+    of expiration, leaving time for the refresh request to complete.
+
+    \note Expiration signal only works if the authorization server has provided
+    a proper expiration time.
+
+    \sa autoRefresh
+*/
+
+/*!
+    \property QAbstractOAuth2::autoRefresh
+    \since 6.9
+    \brief This property enables or disables automatic refresh of
+    the access token.
+
+    This property enables or disables the automatic refresh of the
+    access token. When set to \c {true}, refresh is attempted when
+    \l {accessTokenAboutToExpire()} is sent (provided that
+    \l {refreshToken} is available).
+
+    This is useful for applications that require uninterrupted
+    authorization without user intervention.
+
+    \sa refreshThreshold
+*/
+
+/*!
     \deprecated [6.13] Use serverReportedErrorOccurred instead
     \fn QAbstractOAuth2::error(const QString &error, const QString &errorDescription, const QUrl &uri)
 
@@ -416,6 +471,51 @@ QNetworkRequest QAbstractOAuth2Private::createRequest(QUrl url, const QVariantMa
     const QString bearer = bearerFormat.arg(token);
     request.setRawHeader("Authorization", bearer.toUtf8());
     return request;
+}
+
+void QAbstractOAuth2Private::initializeRefreshTimer()
+{
+    Q_Q(QAbstractOAuth2);
+    refreshTimer.setSingleShot(true);
+    QObject::connect(q, &QAbstractOAuth2::expirationAtChanged, q, [this]() {
+        updateRefreshTimer();
+    });
+    QObject::connect(&refreshTimer, &QChronoTimer::timeout, q,
+                     &QAbstractOAuth2::accessTokenAboutToExpire);
+}
+
+void QAbstractOAuth2Private::updateRefreshTimer()
+{
+    Q_Q(QAbstractOAuth2);
+    qCDebug(loggingCategory, "Updating refresh timer");
+
+    refreshTimer.stop();
+
+    if (!q->expirationAt().isValid()) {
+        qCDebug(loggingCategory, "Expiration time not valid");
+        return;
+    }
+
+    auto threshold = q->refreshThreshold();
+    std::chrono::seconds untilNextExpiration = std::chrono::seconds(
+            QDateTime::currentDateTime().secsTo(q->expirationAt()));
+
+    // Threshold zero means we estimate a decent expiration time, at minimum 10s
+    if (threshold == 0s)
+        threshold = qMax(10s, untilNextExpiration / 20);
+
+    // If expiration is very soon, send signal immediately
+    if (untilNextExpiration < 10s || untilNextExpiration <= threshold) {
+        qCWarning(loggingCategory, "Token expiration soon");
+        Q_EMIT q->accessTokenAboutToExpire();
+        return;
+    }
+
+    std::chrono::seconds interval = untilNextExpiration - threshold;
+    qCDebug(loggingCategory, "Token refresh timer will expire in %lld seconds",
+            static_cast<long long>(interval.count()));
+    refreshTimer.setInterval(interval);
+    refreshTimer.start();
 }
 
 bool QAbstractOAuth2Private::authorizationShouldIncludeNonce() const
@@ -665,11 +765,17 @@ QAbstractOAuth2::QAbstractOAuth2(QNetworkAccessManager *manager, QObject *parent
                                                QUrl(),
                                                manager),
                    parent)
-{}
+{
+    Q_D(QAbstractOAuth2);
+    d->initializeRefreshTimer();
+}
 
 QAbstractOAuth2::QAbstractOAuth2(QAbstractOAuth2Private &dd, QObject *parent) :
     QAbstractOAuth(dd, parent)
-{}
+{
+    Q_D(QAbstractOAuth2);
+    d->initializeRefreshTimer();
+}
 
 void QAbstractOAuth2::setResponseType(const QString &responseType)
 {
@@ -1072,6 +1178,41 @@ void QAbstractOAuth2::setRefreshToken(const QString &refreshToken)
         d->refreshToken = refreshToken;
         Q_EMIT refreshTokenChanged(refreshToken);
     }
+}
+
+std::chrono::seconds QAbstractOAuth2::refreshThreshold() const
+{
+    Q_D(const QAbstractOAuth2);
+    return d->refreshThreshold;
+}
+
+void QAbstractOAuth2::setRefreshThreshold(std::chrono::seconds threshold)
+{
+    Q_D(QAbstractOAuth2);
+    if (threshold < 0s) {
+        qCWarning(d->loggingCategory, "Invalid refresh threshold");
+        return;
+    }
+    if (d->refreshThreshold == threshold)
+        return;
+    d->refreshThreshold = threshold;
+    d->updateRefreshTimer();
+    Q_EMIT refreshThresholdChanged(threshold);
+}
+
+bool QAbstractOAuth2::autoRefresh() const
+{
+    Q_D(const QAbstractOAuth2);
+    return d->autoRefresh;
+}
+
+void QAbstractOAuth2::setAutoRefresh(bool enabled)
+{
+    Q_D(QAbstractOAuth2);
+    if (d->autoRefresh == enabled)
+        return;
+    d->autoRefresh = enabled;
+    Q_EMIT autoRefreshChanged(enabled);
 }
 
 QAbstractOAuth2::NonceMode QAbstractOAuth2::nonceMode() const

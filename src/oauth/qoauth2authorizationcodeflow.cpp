@@ -173,6 +173,15 @@ QByteArray QOAuth2AuthorizationCodeFlowPrivate::createPKCEChallenge()
     Q_UNREACHABLE_RETURN({});
 }
 
+void QOAuth2AuthorizationCodeFlowPrivate::initializeAutoRefresh()
+{
+    Q_Q(QOAuth2AuthorizationCodeFlow);
+    QObject::connect(q, &QAbstractOAuth2::accessTokenAboutToExpire, q, [q] {
+        if (q->autoRefresh() && !(q->refreshToken().isEmpty()))
+            q->refreshAccessToken();
+    });
+}
+
 /*!
     Constructs a QOAuth2AuthorizationCodeFlow object with parent
     object \a parent.
@@ -204,7 +213,10 @@ QOAuth2AuthorizationCodeFlow::QOAuth2AuthorizationCodeFlow(const QString &client
     QAbstractOAuth2(*new QOAuth2AuthorizationCodeFlowPrivate(QUrl(), QUrl(), clientIdentifier,
                                                              manager),
                     parent)
-{}
+{
+    Q_D(QOAuth2AuthorizationCodeFlow);
+    d->initializeAutoRefresh();
+}
 
 /*!
     Constructs a QOAuth2AuthorizationCodeFlow object using \a parent
@@ -219,7 +231,10 @@ QOAuth2AuthorizationCodeFlow::QOAuth2AuthorizationCodeFlow(const QUrl &authentic
     QAbstractOAuth2(*new QOAuth2AuthorizationCodeFlowPrivate(authenticateUrl, accessTokenUrl,
                                                              QString(), manager),
                     parent)
-{}
+{
+    Q_D(QOAuth2AuthorizationCodeFlow);
+    d->initializeAutoRefresh();
+}
 
 /*!
     Constructs a QOAuth2AuthorizationCodeFlow object using \a parent
@@ -236,7 +251,10 @@ QOAuth2AuthorizationCodeFlow::QOAuth2AuthorizationCodeFlow(const QString &client
     QAbstractOAuth2(*new QOAuth2AuthorizationCodeFlowPrivate(authenticateUrl, accessTokenUrl,
                                                              clientIdentifier, manager),
                     parent)
-{}
+{
+    Q_D(QOAuth2AuthorizationCodeFlow);
+    d->initializeAutoRefresh();
+}
 
 /*!
     Destroys the QOAuth2AuthorizationCodeFlow instance.

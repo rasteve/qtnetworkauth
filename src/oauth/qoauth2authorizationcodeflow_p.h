@@ -43,6 +43,8 @@ public:
 
     QByteArray createPKCEChallenge();
 
+    void initializeAutoRefresh();
+
     QOAuth2AuthorizationCodeFlow::PkceMethod pkceMethod
         = QOAuth2AuthorizationCodeFlow::PkceMethod::S256;
     quint8 pkceVerifierLength = 43; // RFC 7636 Section 4.1

@@ -38,6 +38,14 @@ class Q_OAUTH_EXPORT QAbstractOAuth2 : public QAbstractOAuth
                READ refreshToken
                WRITE setRefreshToken
                NOTIFY refreshTokenChanged)
+    Q_PROPERTY(std::chrono::seconds refreshThreshold
+               READ refreshThreshold
+               WRITE setRefreshThreshold
+               NOTIFY refreshThresholdChanged)
+    Q_PROPERTY(bool autoRefresh
+               READ autoRefresh
+               WRITE setAutoRefresh
+               NOTIFY autoRefreshChanged)
     Q_PROPERTY(NonceMode nonceMode READ nonceMode WRITE setNonceMode NOTIFY nonceModeChanged)
     Q_PROPERTY(QString nonce READ nonce WRITE setNonce NOTIFY nonceChanged)
     Q_PROPERTY(QString idToken READ idToken NOTIFY idTokenChanged)
@@ -132,6 +140,12 @@ public:
     QString refreshToken() const;
     void setRefreshToken(const QString &refreshToken);
 
+    std::chrono::seconds refreshThreshold() const;
+    void setRefreshThreshold(std::chrono::seconds threshold);
+
+    bool autoRefresh() const;
+    void setAutoRefresh(bool enable);
+
     NonceMode nonceMode() const;
     void setNonceMode(NonceMode mode);
 
@@ -171,6 +185,9 @@ Q_SIGNALS:
     void stateChanged(const QString &state);
     void expirationAtChanged(const QDateTime &expiration);
     void refreshTokenChanged(const QString &refreshToken);
+    void accessTokenAboutToExpire();
+    void refreshThresholdChanged(std::chrono::seconds threshold);
+    void autoRefreshChanged(bool enable);
     void nonceModeChanged(NonceMode mode);
     void nonceChanged(const QString &nonce);
     void idTokenChanged(const QString &idToken);
