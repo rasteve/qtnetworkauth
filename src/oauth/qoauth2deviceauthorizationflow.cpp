@@ -23,7 +23,6 @@ QT_BEGIN_NAMESPACE
 
 using namespace Qt::StringLiterals;
 using namespace std::chrono_literals;
-using Key = QAbstractOAuth2Private::OAuth2KeyString;
 using Error = QAbstractOAuth::Error;
 using Status = QAbstractOAuth::Status;
 using Stage = QAbstractOAuth::Stage;
@@ -207,15 +206,15 @@ void QOAuth2DeviceAuthorizationFlowPrivate::authorizationReplyFinished(QRestRepl
         return;
 
     // https://datatracker.ietf.org/doc/html/rfc8628#section-3.2 REQUIRED parameters
-    const auto receivedDeviceCode = data.value(Key::deviceCode).toString();
-    const auto receivedUserCode = data.value(Key::userCode).toString();
-    const auto receivedExpiresIn = data.value(Key::expiresIn).toInt();
+    const auto receivedDeviceCode = data.value(QtOAuth2RfcKeywords::deviceCode).toString();
+    const auto receivedUserCode = data.value(QtOAuth2RfcKeywords::userCode).toString();
+    const auto receivedExpiresIn = data.value(QtOAuth2RfcKeywords::expiresIn).toInt();
     QUrl receivedVerificationUrl;
     // The RFC keyword is 'verification_uri', but some auth servers provide 'verification_url'
-    if (data.contains(Key::verificationUri))
-        receivedVerificationUrl = data.value(Key::verificationUri).toString();
-    else if (data.contains(Key::verificationUrl))
-        receivedVerificationUrl = data.value(Key::verificationUrl).toString();
+    if (data.contains(QtOAuth2RfcKeywords::verificationUri))
+        receivedVerificationUrl = data.value(QtOAuth2RfcKeywords::verificationUri).toString();
+    else if (data.contains(QtOAuth2RfcKeywords::verificationUrl))
+        receivedVerificationUrl = data.value(QtOAuth2RfcKeywords::verificationUrl).toString();
 
     if (receivedDeviceCode.isEmpty() || receivedUserCode.isEmpty()
         || receivedVerificationUrl.isEmpty() || receivedExpiresIn <= 0) {
@@ -224,7 +223,7 @@ void QOAuth2DeviceAuthorizationFlowPrivate::authorizationReplyFinished(QRestRepl
         return;
     }
 
-    const int receivedMinimumInterval = data.value(Key::interval).toInt();
+    const int receivedMinimumInterval = data.value(QtOAuth2RfcKeywords::interval).toInt();
     if (receivedMinimumInterval > 0) {
         if (useAutoTestDurations)
             tokenPollingTimer.setInterval(std::chrono::milliseconds(receivedMinimumInterval));
@@ -251,10 +250,13 @@ void QOAuth2DeviceAuthorizationFlowPrivate::authorizationReplyFinished(QRestRepl
     QUrl receivedVerificationUrlComplete;
     // The RFC keyword is 'verification_uri_complete', but some auth servers
     // use 'verification_url_complete'
-    if (data.contains(Key::completeVerificationUri))
-        receivedVerificationUrlComplete = data.value(Key::completeVerificationUri).toString();
-    else if (data.contains(Key::completeVerificationUrl))
-        receivedVerificationUrlComplete = data.value(Key::completeVerificationUrl).toString();
+    if (data.contains(QtOAuth2RfcKeywords::completeVerificationUri)) {
+        receivedVerificationUrlComplete =
+            data.value(QtOAuth2RfcKeywords::completeVerificationUri).toString();
+    } else if (data.contains(QtOAuth2RfcKeywords::completeVerificationUrl)) {
+        receivedVerificationUrlComplete =
+            data.value(QtOAuth2RfcKeywords::completeVerificationUrl).toString();
+    }
 
     deviceCode = receivedDeviceCode;
     setUserCode(receivedUserCode);
@@ -262,10 +264,10 @@ void QOAuth2DeviceAuthorizationFlowPrivate::authorizationReplyFinished(QRestRepl
     setVerificationUrlComplete(receivedVerificationUrlComplete);
 
     QVariantMap copy(data.toVariantMap());
-    copy.remove(Key::deviceCode);
-    copy.remove(Key::userCode);
-    copy.remove(Key::verificationUrl);
-    copy.remove(Key::completeVerificationUrl);
+    copy.remove(QtOAuth2RfcKeywords::deviceCode);
+    copy.remove(QtOAuth2RfcKeywords::userCode);
+    copy.remove(QtOAuth2RfcKeywords::verificationUrl);
+    copy.remove(QtOAuth2RfcKeywords::completeVerificationUrl);
     setExtraTokens(copy);
 
     setStatus(Status::TemporaryCredentialsReceived);
@@ -291,7 +293,7 @@ void QOAuth2DeviceAuthorizationFlowPrivate::tokenReplyFinished(QRestReply &reply
         return;
     }
     const auto data = jsonDoc->object();
-    if (data.contains(Key::error)) {
+    if (data.contains(QtOAuth2RfcKeywords::error)) {
         // With device flow, error responses can be part of a successful flow
         handleTokenErrorResponse(data);
         return;
@@ -302,7 +304,7 @@ void QOAuth2DeviceAuthorizationFlowPrivate::tokenReplyFinished(QRestReply &reply
 void QOAuth2DeviceAuthorizationFlowPrivate::handleTokenErrorResponse(const QJsonObject &data)
 {
     Q_Q(QOAuth2DeviceAuthorizationFlow);
-    const auto errorCode = data.value(Key::error).toString();
+    const auto errorCode = data.value(QtOAuth2RfcKeywords::error).toString();
 
     // https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
     // RFC defines additional error codes that require specific handling
@@ -322,9 +324,9 @@ void QOAuth2DeviceAuthorizationFlowPrivate::handleTokenErrorResponse(const QJson
         // Other errors are terminal
         // https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
         // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-        const auto error = data.value(Key::error).toString();
-        const auto description = data.value(Key::errorDescription).toString();
-        const auto uri = data.value(Key::errorUri).toString();
+        const auto error = data.value(QtOAuth2RfcKeywords::error).toString();
+        const auto description = data.value(QtOAuth2RfcKeywords::errorDescription).toString();
+        const auto uri = data.value(QtOAuth2RfcKeywords::errorUri).toString();
         qCDebug(loggingCategory) << "Token acquisition failed:" << error << description;
 #if QT_DEPRECATED_SINCE(6, 13)
         QT_IGNORE_DEPRECATIONS(Q_EMIT q->error(error, description, uri);)
@@ -443,11 +445,12 @@ void QOAuth2DeviceAuthorizationFlowPrivate::pollTokens()
     QMultiMap<QString, QVariant> parameters;
     // https://datatracker.ietf.org/doc/html/rfc8628#section-3.4
     static constexpr auto grantType = "urn:ietf:params:oauth:grant-type:device_code"_L1;
-    parameters.insert(Key::grantType, QUrl::toPercentEncoding(grantType));
-    parameters.insert(Key::deviceCode, QUrl::toPercentEncoding(deviceCode));
-    parameters.insert(Key::clientIdentifier, QUrl::toPercentEncoding(clientIdentifier));
+    parameters.insert(QtOAuth2RfcKeywords::grantType, QUrl::toPercentEncoding(grantType));
+    parameters.insert(QtOAuth2RfcKeywords::deviceCode, QUrl::toPercentEncoding(deviceCode));
+    parameters.insert(QtOAuth2RfcKeywords::clientIdentifier,
+                      QUrl::toPercentEncoding(clientIdentifier));
     if (!clientIdentifierSharedKey.isEmpty())
-        parameters.insert(Key::clientSharedSecret, clientIdentifierSharedKey);
+        parameters.insert(QtOAuth2RfcKeywords::clientSharedSecret, clientIdentifierSharedKey);
     if (modifyParametersFunction)
         modifyParametersFunction(QAbstractOAuth2::Stage::RequestingAccessToken, &parameters);
 
@@ -675,13 +678,13 @@ void QOAuth2DeviceAuthorizationFlow::grant()
     }
 
     QMultiMap<QString, QVariant> parameters;
-    parameters.insert(Key::clientIdentifier, d->clientIdentifier);
+    parameters.insert(QtOAuth2RfcKeywords::clientIdentifier, d->clientIdentifier);
     if (!d->requestedScope.isEmpty())
-        parameters.insert(Key::scope, d->requestedScope.join(" "_L1));
+        parameters.insert(QtOAuth2RfcKeywords::scope, d->requestedScope.join(" "_L1));
     if (d->authorizationShouldIncludeNonce()) {
         if (d->nonce.isEmpty())
             setNonce(QAbstractOAuth2Private::generateNonce());
-        parameters.insert(Key::nonce, d->nonce);
+        parameters.insert(QtOAuth2RfcKeywords::nonce, d->nonce);
     }
     if (d->modifyParametersFunction)
         d->modifyParametersFunction(Stage::RequestingAuthorization, &parameters);

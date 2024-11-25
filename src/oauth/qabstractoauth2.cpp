@@ -386,38 +386,6 @@ using namespace std::chrono_literals;
     from the server.
 */
 
-using OAuth2 = QAbstractOAuth2Private::OAuth2KeyString;
-const QString OAuth2::accessToken =        u"access_token"_s;
-const QString OAuth2::apiKey =             u"api_key"_s;
-const QString OAuth2::clientIdentifier =   u"client_id"_s;
-const QString OAuth2::clientSharedSecret = u"client_secret"_s;
-const QString OAuth2::code =               u"code"_s;
-const QString OAuth2::error =              u"error"_s;
-const QString OAuth2::errorDescription =   u"error_description"_s;
-const QString OAuth2::errorUri =           u"error_uri"_s;
-const QString OAuth2::expiresIn =          u"expires_in"_s;
-const QString OAuth2::grantType =          u"grant_type"_s;
-const QString OAuth2::redirectUri =        u"redirect_uri"_s;
-const QString OAuth2::refreshToken =       u"refresh_token"_s;
-const QString OAuth2::responseType =       u"response_type"_s;
-const QString OAuth2::scope =              u"scope"_s;
-const QString OAuth2::state =              u"state"_s;
-const QString OAuth2::tokenType =          u"token_type"_s;
-const QString OAuth2::codeVerifier =       u"code_verifier"_s;
-const QString OAuth2::codeChallenge =      u"code_challenge"_s;
-const QString OAuth2::codeChallengeMethod = u"code_challenge_method"_s;
-const QString OAuth2::nonce =              u"nonce"_s;
-const QString OAuth2::idToken =            u"id_token"_s;
-const QString OAuth2::deviceCode =         u"device_code"_s;
-const QString OAuth2::userCode =           u"user_code"_s;
-// RFC keyword is verification_uri[_complete], but some servers use 'url' (note L)
-// https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
-const QString OAuth2::verificationUri =    u"verification_uri"_s;
-const QString OAuth2::verificationUrl =    u"verification_url"_s;
-const QString OAuth2::completeVerificationUri = u"verification_uri_complete"_s;
-const QString OAuth2::completeVerificationUrl = u"verification_url_complete"_s;
-const QString OAuth2::interval =           u"interval"_s;
-
 QAbstractOAuth2Private::QAbstractOAuth2Private(const QPair<QString, QString> &clientCredentials,
                                                const QUrl &authorizationUrl,
                                                QNetworkAccessManager *manager) :
@@ -560,22 +528,21 @@ void QAbstractOAuth2Private::_q_tokenRequestFailed(QAbstractOAuth::Error error,
 void QAbstractOAuth2Private::_q_tokenRequestFinished(const QVariantMap &values)
 {
     Q_Q(QAbstractOAuth2);
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
 
-    if (values.contains(Key::error)) {
+    if (values.contains(QtOAuth2RfcKeywords::error)) {
         _q_tokenRequestFailed(QAbstractOAuth::Error::ServerError,
-                                    values.value(Key::error).toString());
+                                    values.value(QtOAuth2RfcKeywords::error).toString());
         return;
     }
 
     bool ok;
-    const QString accessToken = values.value(Key::accessToken).toString();
-    tokenType = values.value(Key::tokenType).toString();
-    int expiresIn = values.value(Key::expiresIn).toInt(&ok);
+    const QString accessToken = values.value(QtOAuth2RfcKeywords::accessToken).toString();
+    tokenType = values.value(QtOAuth2RfcKeywords::tokenType).toString();
+    int expiresIn = values.value(QtOAuth2RfcKeywords::expiresIn).toInt(&ok);
     if (!ok)
         expiresIn = -1;
-    if (values.value(Key::refreshToken).isValid())
-        q->setRefreshToken(values.value(Key::refreshToken).toString());
+    if (values.value(QtOAuth2RfcKeywords::refreshToken).isValid())
+        q->setRefreshToken(values.value(QtOAuth2RfcKeywords::refreshToken).toString());
 
     if (accessToken.isEmpty()) {
         _q_tokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
@@ -591,7 +558,7 @@ void QAbstractOAuth2Private::_q_tokenRequestFinished(const QVariantMap &values)
     //
     // Note: 'scope' variable has two roles: requested scope, and later granted scope.
     // Therefore 'scope' needs to be set if the granted scope differs from 'scope'.
-    const QString receivedGrantedScope = values.value(Key::scope).toString();
+    const QString receivedGrantedScope = values.value(QtOAuth2RfcKeywords::scope).toString();
     const QStringList splitGrantedScope = receivedGrantedScope.split(" "_L1, Qt::SkipEmptyParts);
     if (splitGrantedScope.isEmpty()) {
         setGrantedScope(requestedScope);
@@ -608,7 +575,7 @@ void QAbstractOAuth2Private::_q_tokenRequestFinished(const QVariantMap &values)
     // An id_token must be included if this was an OIDC request
     // https://openid.net/specs/openid-connect-core-1_0-final.html#AuthRequest (cf. 'scope')
     // https://openid.net/specs/openid-connect-core-1_0-final.html#TokenResponse
-    const QString receivedIdToken = values.value(Key::idToken).toString();
+    const QString receivedIdToken = values.value(QtOAuth2RfcKeywords::idToken).toString();
     if (grantedScope.contains("openid"_L1) && receivedIdToken.isEmpty()) {
         setIdToken({});
         _q_tokenRequestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError,
@@ -624,12 +591,12 @@ void QAbstractOAuth2Private::_q_tokenRequestFinished(const QVariantMap &values)
     }
 
     QVariantMap copy(values);
-    copy.remove(Key::accessToken);
-    copy.remove(Key::expiresIn);
-    copy.remove(Key::refreshToken);
-    copy.remove(Key::scope);
-    copy.remove(Key::tokenType);
-    copy.remove(Key::idToken);
+    copy.remove(QtOAuth2RfcKeywords::accessToken);
+    copy.remove(QtOAuth2RfcKeywords::expiresIn);
+    copy.remove(QtOAuth2RfcKeywords::refreshToken);
+    copy.remove(QtOAuth2RfcKeywords::scope);
+    copy.remove(QtOAuth2RfcKeywords::tokenType);
+    copy.remove(QtOAuth2RfcKeywords::idToken);
     QVariantMap newExtraTokens = extraTokens;
     newExtraTokens.insert(copy);
     setExtraTokens(newExtraTokens);
@@ -640,13 +607,12 @@ void QAbstractOAuth2Private::_q_tokenRequestFinished(const QVariantMap &values)
 bool QAbstractOAuth2Private::handleRfcErrorResponseIfPresent(const QVariantMap &data)
 {
     Q_Q(QAbstractOAuth2);
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
-    const QString error = data.value(Key::error).toString();
+    const QString error = data.value(QtOAuth2RfcKeywords::error).toString();
 
     if (error.size()) {
         // RFC 6749, Section 5.2 Error Response
-        const QString uri = data.value(Key::errorUri).toString();
-        const QString description = data.value(Key::errorDescription).toString();
+        const QString uri = data.value(QtOAuth2RfcKeywords::errorUri).toString();
+        const QString description = data.value(QtOAuth2RfcKeywords::errorDescription).toString();
         qCWarning(loggingCategory, "Authorization stage: AuthenticationError: %s(%s): %s",
                   qPrintable(error), qPrintable(uri), qPrintable(description));
 
@@ -665,8 +631,6 @@ bool QAbstractOAuth2Private::handleRfcErrorResponseIfPresent(const QVariantMap &
 QAbstractOAuth2Private::RequestAndBody QAbstractOAuth2Private::createRefreshRequestAndBody(
     const QUrl &url)
 {
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
-
     RequestAndBody result;
     result.request.setUrl(url);
 
@@ -676,10 +640,10 @@ QAbstractOAuth2Private::RequestAndBody QAbstractOAuth2Private::createRefreshRequ
         result.request.setSslConfiguration(*sslConfiguration);
 #endif
     QUrlQuery query;
-    parameters.insert(Key::grantType, QStringLiteral("refresh_token"));
-    parameters.insert(Key::refreshToken, refreshToken);
-    parameters.insert(Key::clientIdentifier, clientIdentifier);
-    parameters.insert(Key::clientSharedSecret, clientIdentifierSharedKey);
+    parameters.insert(QtOAuth2RfcKeywords::grantType, QStringLiteral("refresh_token"));
+    parameters.insert(QtOAuth2RfcKeywords::refreshToken, refreshToken);
+    parameters.insert(QtOAuth2RfcKeywords::clientIdentifier, clientIdentifier);
+    parameters.insert(QtOAuth2RfcKeywords::clientSharedSecret, clientIdentifierSharedKey);
     if (modifyParametersFunction)
         modifyParametersFunction(QAbstractOAuth::Stage::RefreshingAccessToken, &parameters);
     query = QAbstractOAuthPrivate::createQuery(parameters);
@@ -832,7 +796,7 @@ QUrl QAbstractOAuth2::createAuthenticatedUrl(const QUrl &url, const QVariantMap 
     }
     QUrl ret = url;
     QUrlQuery query(ret.query());
-    query.addQueryItem(OAuth2::accessToken, d->token);
+    query.addQueryItem(QtOAuth2RfcKeywords::accessToken, d->token);
     for (auto it = parameters.begin(), end = parameters.end(); it != end ;++it)
         query.addQueryItem(it.key(), it.value().toString());
     ret.setQuery(query);

@@ -83,7 +83,6 @@ static QString fromUrlFormEncoding(const QString &source)
 void QOAuth2AuthorizationCodeFlowPrivate::_q_handleCallback(const QVariantMap &data)
 {
     Q_Q(QOAuth2AuthorizationCodeFlow);
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
 
     if (status != QAbstractOAuth::Status::NotAuthenticated) {
         qCWarning(loggingCategory) << "Authorization stage: callback in unexpected status:"
@@ -96,13 +95,14 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_handleCallback(const QVariantMap &d
     if (handleRfcErrorResponseIfPresent(data))
         return;
 
-    const QString code = data.value(Key::code).toString();
+    const QString code = data.value(QtOAuth2RfcKeywords::code).toString();
     if (code.isEmpty()) {
         qCWarning(loggingCategory, "Authorization stage: Code not received");
         emit q->requestFailed(QAbstractOAuth::Error::OAuthTokenNotFoundError);
         return;
     }
-    const QString receivedState = fromUrlFormEncoding(data.value(Key::state).toString());
+    const QString receivedState =
+        fromUrlFormEncoding(data.value(QtOAuth2RfcKeywords::state).toString());
     if (receivedState.isEmpty()) {
         qCWarning(loggingCategory, "Authorization stage: State not received");
         emit q->requestFailed(QAbstractOAuth::Error::ServerError);
@@ -117,8 +117,8 @@ void QOAuth2AuthorizationCodeFlowPrivate::_q_handleCallback(const QVariantMap &d
     setStatus(QAbstractOAuth::Status::TemporaryCredentialsReceived);
 
     QVariantMap copy(data);
-    copy.remove(Key::code);
-    copy.remove(Key::state);
+    copy.remove(QtOAuth2RfcKeywords::code);
+    copy.remove(QtOAuth2RfcKeywords::state);
     setExtraTokens(copy);
     q->requestAccessToken(code);
 }
@@ -431,7 +431,6 @@ void QOAuth2AuthorizationCodeFlow::refreshAccessToken()
 QUrl QOAuth2AuthorizationCodeFlow::buildAuthenticateUrl(const QMultiMap<QString, QVariant> &parameters)
 {
     Q_D(QOAuth2AuthorizationCodeFlow);
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
 
     if (d->state.isEmpty())
         setState(QAbstractOAuth2Private::generateRandomState());
@@ -440,21 +439,21 @@ QUrl QOAuth2AuthorizationCodeFlow::buildAuthenticateUrl(const QMultiMap<QString,
 
     QMultiMap<QString, QVariant> p(parameters);
     QUrl url(d->authorizationUrl);
-    p.insert(Key::responseType, responseType());
-    p.insert(Key::clientIdentifier, d->clientIdentifier);
-    p.insert(Key::redirectUri, callback());
+    p.insert(QtOAuth2RfcKeywords::responseType, responseType());
+    p.insert(QtOAuth2RfcKeywords::clientIdentifier, d->clientIdentifier);
+    p.insert(QtOAuth2RfcKeywords::redirectUri, callback());
     if (!d->requestedScope.isEmpty())
-        p.insert(Key::scope, d->requestedScope.join(" "_L1));
-    p.insert(Key::state, toUrlFormEncoding(state));
+        p.insert(QtOAuth2RfcKeywords::scope, d->requestedScope.join(" "_L1));
+    p.insert(QtOAuth2RfcKeywords::state, toUrlFormEncoding(state));
     if (d->pkceMethod != PkceMethod::None) {
-        p.insert(Key::codeChallenge, d->createPKCEChallenge());
-        p.insert(Key::codeChallengeMethod,
+        p.insert(QtOAuth2RfcKeywords::codeChallenge, d->createPKCEChallenge());
+        p.insert(QtOAuth2RfcKeywords::codeChallengeMethod,
                  d->pkceMethod == PkceMethod::Plain ? u"plain"_s : u"S256"_s);
     }
     if (d->authorizationShouldIncludeNonce()) {
         if (d->nonce.isEmpty())
             setNonce(QAbstractOAuth2Private::generateNonce());
-        p.insert(Key::nonce, d->nonce);
+        p.insert(QtOAuth2RfcKeywords::nonce, d->nonce);
     }
     if (d->modifyParametersFunction)
         d->modifyParametersFunction(Stage::RequestingAuthorization, &p);
@@ -474,7 +473,6 @@ QUrl QOAuth2AuthorizationCodeFlow::buildAuthenticateUrl(const QMultiMap<QString,
 void QOAuth2AuthorizationCodeFlow::requestAccessToken(const QString &code)
 {
     Q_D(QOAuth2AuthorizationCodeFlow);
-    using Key = QAbstractOAuth2Private::OAuth2KeyString;
 
     QMultiMap<QString, QVariant> parameters;
     QNetworkRequest request(d->accessTokenUrl);
@@ -483,20 +481,21 @@ void QOAuth2AuthorizationCodeFlow::requestAccessToken(const QString &code)
         request.setSslConfiguration(*d->sslConfiguration);
 #endif
     QUrlQuery query;
-    parameters.insert(Key::grantType, QStringLiteral("authorization_code"));
+    parameters.insert(QtOAuth2RfcKeywords::grantType, QStringLiteral("authorization_code"));
 
     if (code.contains(QLatin1Char('%')))
-        parameters.insert(Key::code, code);
+        parameters.insert(QtOAuth2RfcKeywords::code, code);
     else
-        parameters.insert(Key::code, QUrl::toPercentEncoding(code));
+        parameters.insert(QtOAuth2RfcKeywords::code, QUrl::toPercentEncoding(code));
 
-    parameters.insert(Key::redirectUri, QUrl::toPercentEncoding(callback()));
-    parameters.insert(Key::clientIdentifier, QUrl::toPercentEncoding(d->clientIdentifier));
+    parameters.insert(QtOAuth2RfcKeywords::redirectUri, QUrl::toPercentEncoding(callback()));
+    parameters.insert(QtOAuth2RfcKeywords::clientIdentifier,
+                      QUrl::toPercentEncoding(d->clientIdentifier));
 
     if (d->pkceMethod != PkceMethod::None)
-        parameters.insert(Key::codeVerifier, d->pkceCodeVerifier);
+        parameters.insert(QtOAuth2RfcKeywords::codeVerifier, d->pkceCodeVerifier);
     if (!d->clientIdentifierSharedKey.isEmpty())
-        parameters.insert(Key::clientSharedSecret, d->clientIdentifierSharedKey);
+        parameters.insert(QtOAuth2RfcKeywords::clientSharedSecret, d->clientIdentifierSharedKey);
     if (d->modifyParametersFunction)
         d->modifyParametersFunction(Stage::RequestingAccessToken, &parameters);
     query = QAbstractOAuthPrivate::createQuery(parameters);

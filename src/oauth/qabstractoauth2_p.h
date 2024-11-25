@@ -101,41 +101,41 @@ public:
 #ifndef QT_NO_SSL
     std::optional<QSslConfiguration> sslConfiguration;
 #endif
-
-    struct OAuth2KeyString
-    {
-        static const QString accessToken;
-        static const QString apiKey;
-        static const QString clientIdentifier;
-        static const QString clientSharedSecret;
-        static const QString code;
-        static const QString error;
-        static const QString errorDescription;
-        static const QString errorUri;
-        static const QString expiresIn;
-        static const QString grantType;
-        static const QString redirectUri;
-        static const QString refreshToken;
-        static const QString responseType;
-        static const QString scope;
-        static const QString state;
-        static const QString tokenType;
-        static const QString codeVerifier;
-        static const QString codeChallenge;
-        static const QString codeChallengeMethod;
-        static const QString nonce;
-        static const QString idToken;
-        static const QString deviceCode;
-        static const QString userCode;
-        // RFC keyword is verification_uri[_complete], but some servers use 'url' (note L)
-        // https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
-        static const QString verificationUri;
-        static const QString verificationUrl;
-        static const QString completeVerificationUri;
-        static const QString completeVerificationUrl;
-        static const QString interval;
-    };
 };
+
+namespace QtOAuth2RfcKeywords
+{
+    inline constexpr auto accessToken = QLatin1StringView("access_token");
+    inline constexpr auto apiKey = QLatin1StringView("api_key");
+    inline constexpr auto clientIdentifier = QLatin1StringView("client_id");
+    inline constexpr auto clientSharedSecret = QLatin1StringView("client_secret");
+    inline constexpr auto code = QLatin1StringView("code");
+    inline constexpr auto error = QLatin1StringView("error");
+    inline constexpr auto errorDescription = QLatin1StringView("error_description");
+    inline constexpr auto errorUri = QLatin1StringView("error_uri");
+    inline constexpr auto expiresIn = QLatin1StringView("expires_in");
+    inline constexpr auto grantType = QLatin1StringView("grant_type");
+    inline constexpr auto redirectUri = QLatin1StringView("redirect_uri");
+    inline constexpr auto refreshToken = QLatin1StringView("refresh_token");
+    inline constexpr auto responseType = QLatin1StringView("response_type");
+    inline constexpr auto scope = QLatin1StringView("scope");
+    inline constexpr auto state = QLatin1StringView("state");
+    inline constexpr auto tokenType = QLatin1StringView("token_type");
+    inline constexpr auto codeVerifier = QLatin1StringView("code_verifier");
+    inline constexpr auto codeChallenge = QLatin1StringView("code_challenge");
+    inline constexpr auto codeChallengeMethod = QLatin1StringView("code_challenge_method");
+    inline constexpr auto nonce = QLatin1StringView("nonce");
+    inline constexpr auto idToken = QLatin1StringView("id_token");
+    inline constexpr auto deviceCode = QLatin1StringView("device_code");
+    inline constexpr auto userCode = QLatin1StringView("user_code");
+    // RFC keyword is verification_uri[_complete], but some servers use 'url' (note L)
+    // https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
+    inline constexpr auto verificationUri = QLatin1StringView("verification_uri");
+    inline constexpr auto verificationUrl = QLatin1StringView("verification_url");
+    inline constexpr auto completeVerificationUri = QLatin1StringView("verification_uri_complete");
+    inline constexpr auto completeVerificationUrl = QLatin1StringView("verification_url_complete");
+    inline constexpr auto interval = QLatin1StringView("interval");
+}
 
 QT_END_NAMESPACE
 
