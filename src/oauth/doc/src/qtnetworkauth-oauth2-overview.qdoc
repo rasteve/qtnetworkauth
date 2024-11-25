@@ -73,7 +73,7 @@ The Authorization Code Flow has two main stages: resource authorization
 token request. These are optionally followed by access token usage and
 access token refreshing. The following figure illustrates these stages:
 
-\image oauth2-stages.webp
+\image oauth2-codeflow-stages.webp
 
 \list
     \li In authorization stage, the user is authenticated, and
@@ -104,13 +104,14 @@ OAuth2 flows are dynamic and following the details can
 be tricky at first. The figure below illustrates the main details
 of a successful authorization code flow.
 
-\image oauth2-flow-details.webp
+\image oauth2-codeflow-details.webp
 
 For clarity the figure omits some less used signals, but altogether
 illustrates the details and main customization points. The customization
 points are the various signals/slots the application can catch (and call),
-as well as the callback which is settable with
-\l QAbstractOAuth::setModifyParametersFunction().
+as well as the callbacks which are settable with
+\l QAbstractOAuth::setModifyParametersFunction() and
+\l QAbstractOAuth2::setNetworkRequestModifier().
 
 \section2 Choosing A Reply Handler
 

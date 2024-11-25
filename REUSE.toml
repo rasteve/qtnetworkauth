@@ -29,8 +29,7 @@ SPDX-License-Identifier = "LicenseRef-Qt-Commercial OR BSD-3-Clause"
 
 [[annotations]]
 path = ["**.qdocconf",
-        "src/oauth/doc/images/oauth2-flow-details.webp",
-        "src/oauth/doc/images/oauth2-stages.webp"]
+        "src/oauth/doc/images/**.webp"]
 comment = "documentation"
 precedence = "closest"
 SPDX-FileCopyrightText = "Copyright (C) 2024 The Qt Company Ltd."
