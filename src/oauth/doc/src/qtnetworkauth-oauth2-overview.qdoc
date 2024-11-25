@@ -25,8 +25,45 @@ within the shipped binary.
 further defines the best practices for such applications. Among other things,
 it defines the
 \l {https://datatracker.ietf.org/doc/html/rfc8252#section-6}{Authorization Code Flow}
-as the recommended flow. QtNetworkAuth provides a concrete implementation for
-this flow, and it is also the focus of this documentation.
+as the recommended flow, and therefore QtNetworkAuth provides a concrete
+implementation of this flow.
+
+Since Qt 6.9, QtNetworkAuth also provides support for
+\l {https://datatracker.ietf.org/doc/html/rfc8628}{RFC 8628 OAuth 2.0 Device Authorization Grant}.
+This \e {device flow} is intended for connected devices that have limited input
+capabilities, or where using a user-agent or browser is not practical.
+Examples of such devices include televisions, media consoles, machine HMIs,
+and IoT devices.
+
+The following table highlights the main aspects of the two concrete OAuth2
+flows supported by QtNetworkAuth module:
+
+\table
+\header
+    \li Aspect
+    \li Authorization Code Flow
+    \li Device Authorization Flow
+\row
+    \li Network Connection
+    \li Yes
+    \li Yes
+\row
+    \li User Interaction
+    \li Browser / user-agent on the same device
+    \li Browser / user-agent on a different device
+\row
+    \li Redirect Handling Required
+    \li Yes
+    \li No
+\row
+    \li Input Capability On Device
+    \li Rich input capabilities
+    \li Limited or no input capability
+\row
+    \li Targets
+    \li Desktop and Mobile Apps
+    \li TVs, Consoles, HMIs, IoT Devices
+\endtable
 
 \section1 Qt OAuth2 Classes
 
@@ -34,19 +71,21 @@ QtNetworkAuth provides both concrete and abstract OAuth2 classes.
 The abstract classes are intended for implementing custom flows, while
 the concrete classes provide a concrete implementation.
 
-To implement an OAuth2 flow with QtNetworkAuth, two classes are needed:
+QtNetworkAuth has two abstract classes for implementing OAuth2 flows:
 \list
-    \li A \e {OAuth2 flow implementation} class provides the main API,
-        and is the orchestrator of the flow. It usually owns one reply handler.
-        The abstract class is QAbstractOAuth2, and the concrete
-        implementation is QOAuth2AuthorizationCodeFlow.
-    \li A \e {Reply handler} class which handles replies from an authorization
-        server. With authorization code flow, these include authorization,
-        access token request, and access token refresh.
-        The results of processing a reply are further handled by the
-        flow class. The reply handler abstract class is QAbstractOAuthReplyHandler,
-        and the concrete classes are QOAuthHttpServerReplyHandler and
-        QOAuthUriSchemeReplyHandler.
+    \li An \e {OAuth2 flow implementation} class provides the main API,
+        and is the orchestrator of the flow. The abstract class is
+        QAbstractOAuth2, and the concrete implementations are
+        QOAuth2AuthorizationCodeFlow and QOAuth2DeviceAuthorizationFlow.
+    \li A \e {Reply handler} class which handles redirects and replies
+        from an authorization server. The reply handler abstract class
+        is QAbstractOAuthReplyHandler, and the concrete classes are
+        QOAuthHttpServerReplyHandler and QOAuthUriSchemeReplyHandler.
+        The main difference between reply handlers is what kind
+        of redirects they are designed to handle. QOAuth2AuthorizationCodeFlow
+        relies on having a reply handler to handle the redirects,
+        whereas QOAuth2DeviceAuthorizationFlow, which is not based on
+        redirects, does not use reply handlers.
 \endlist
 
 \section1 Authorization Code Flow
@@ -157,6 +196,57 @@ The choice depends on several factors such as:
  {RFC 8252 recommends using the \c https scheme} for
 security and usability advantages over the other methods.
 \endquotation
+
+\section1 Device Authorization Flow
+
+The Device Authorization Flow is intended for connected devices that are
+limited in terms of input capabilities, or where user-agent/browser usage
+is not practical.
+
+The following code snippet provides an example setup:
+\snippet src_oauth_replyhandlers.cpp deviceflow-setup
+\codeline
+\snippet src_oauth_replyhandlers.cpp deviceflow-handle-authorizewithusercode
+\codeline
+\snippet src_oauth_replyhandlers.cpp deviceflow-handle-grant
+
+\section2 Stages
+
+Device Authorization Flow has three main stages: initializing
+the authorization, polling for tokens, and completing the authorization.
+These are optionally followed by token usage and token refreshing.
+The following figure illustrates these stages:
+
+\image oauth2-deviceflow-stages.webp
+
+\list
+    \li Authorization is initialized by sending a HTTP request to
+        the authorization server. The authorization server provides a user
+        code, verification URL(s), and a device code in response.
+    \li After authorization is initialized, user is provided with
+        a user code and verification URL(s) for completing the authorization.
+        Providing the information for the user is
+        \l {https://datatracker.ietf.org/doc/html/rfc8628#section-3.3}{use-case specific}:
+        it can be a visible URL on the screen, QR code, an email, and so on.
+    \li While waiting for a user to complete the authorization, the device flow
+        polls the authorization server for tokens. The device code
+        received in the previous step is used to match the authorization
+        session. The poll interval is decided by the authorization server,
+        and is typically 5 seconds.
+    \li Once user has accepted (or denied) the authorization, the
+        authorization server responds to a poll request with the requested
+        tokens or an error code (in case of denial), and the authorization is
+        complete.
+\endlist
+
+\section2 Details and Customization
+
+The following figure illustrates the flow in more detail. The figure
+illustrates also the main customization points, which may sometimes
+be needed (for instance proprietary parameters, or additional
+authentication credentials).
+
+\image oauth2-deviceflow-details.webp
 
 \section1 Qt OpenID Connect Support
 
