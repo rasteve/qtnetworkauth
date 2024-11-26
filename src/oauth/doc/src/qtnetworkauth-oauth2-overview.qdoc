@@ -248,6 +248,50 @@ authentication credentials).
 
 \image oauth2-deviceflow-details.webp
 
+\section1 Refreshing Tokens
+
+A full OAuth2 flow requires user interaction, which can be intrusive
+to the user experience. To minimize these interactions,
+tokens can be
+\l {https://datatracker.ietf.org/doc/html/rfc6749#section-6}
+{silently refreshed} from user's perspective.
+
+Refreshing tokens requires that the authorization server provide a
+\l {https://datatracker.ietf.org/doc/html/rfc6749#section-1.5}{refresh token}
+during authorization. Providing a refresh token is up to the
+authorization server: some servers provide it always, some never,
+and some provide it if a specific \l {QAbstractOAuth2::requestedScope}{scope}
+was present in the authorization request.
+
+The following figure illustrates the token refresh in more detail:
+
+\image oauth2-refresh-details.webp
+
+As shown in the figure above, the usual customization points
+are also available when refreshing tokens.
+
+To refresh the tokens after an application startup,
+the application needs to persist the refresh token securely,
+and set it with \l {QAbstractOAuth2::setRefreshToken()}.
+\l {QOAuth2AuthorizationCodeFlow::refreshAccessToken()}
+or \l {QOAuth2DeviceAuthorizationFlow::refreshAccessToken()} can
+then be called to request new tokens.
+
+Since Qt 6.9, applications can also use refresh convenience
+functionality to automatically refresh the tokens - see
+\l {QAbstractOAuth2::accessTokenAboutToExpire()},
+\l {QAbstractOAuth2::autoRefresh}, and
+\l {QAbstractOAuth2::refreshThreshold}.
+
+The expiration time for a refresh token is generally not indicated by
+the authorization server (apart from the server's documentation).
+Their validity can range from days to months, or longer. Furthermore,
+as with other tokens, they can be revoked by the user and thus
+invalidated at any time. Therefore, it is important to properly detect a failed
+refresh attempt with
+\l {QAbstractOAuth::requestFailed()} or
+\l {QAbstractOAuth2::serverReportedErrorOccurred()}.
+
 \section1 Qt OpenID Connect Support
 
 OpenID Connect (OIDC) is a
