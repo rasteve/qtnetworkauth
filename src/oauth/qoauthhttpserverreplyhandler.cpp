@@ -87,6 +87,17 @@ using namespace Qt::StringLiterals;
     for instance:
     \e {http://192.168.0.123:{port}/{path}} in the case of an IPv4 address.
 
+    It's also possible to specify the host part of the callback
+    URL manually with \l {setCallbackHost()}. For instance you can
+    specify the callback to be \c {localhost.localnet}.
+    Naturally you need to ensure that such address is reachable upon
+    redirection.
+
+    \code
+    auto replyHandler = new QOAuthHttpServerReplyHandler(QHostAddress::LocalHost, 1337, this);
+    replyHandler->setCallbackHost("localhost.localnet"_L1);
+    \endcode
+
     \section1 HTTP and HTTPS Callbacks
 
     Since Qt 6.9 it's possible to configure the handler to use
@@ -154,7 +165,10 @@ QString QOAuthHttpServerReplyHandlerPrivate::callback() const
 QString QOAuthHttpServerReplyHandlerPrivate::callbackHost() const
 {
     QString host;
-    if (callbackAddress == QHostAddress::AnyIPv4 || callbackAddress == QHostAddress::Any
+    if (!callbackHostname.isEmpty()) {
+        // Use application-provided hostname
+        host = callbackHostname;
+    } else if (callbackAddress == QHostAddress::AnyIPv4 || callbackAddress == QHostAddress::Any
                || callbackAddress == QHostAddress::AnyIPv6) {
         // Convert Any addresses to "localhost"
         host = u"localhost"_s;
@@ -472,6 +486,36 @@ void QOAuthHttpServerReplyHandler::setCallbackPath(const QString &path)
     d->path = url.path(QUrl::FullyEncoded);
     if (d->path.isEmpty())
         d->path = u'/';
+}
+
+/*!
+    \since 6.9
+
+    Returns the name that is used as the host component of the
+    \l callback() / \l{https://datatracker.ietf.org/doc/html/rfc6749#section-3.1.2}
+    {OAuth2 redirect_uri parameter}.
+
+    \sa setCallbackHost()
+*/
+QString QOAuthHttpServerReplyHandler::callbackHost() const
+{
+    Q_D(const QOAuthHttpServerReplyHandler);
+    return d->callbackHost();
+}
+
+/*!
+    \since 6.9
+
+    Sets \a host to be used as the hostname component of the
+    \l callback(). Providing a non-empty \a host overrides the
+    default behavior, see \l {IPv4 and IPv6}.
+
+    \sa callbackHost()
+*/
+void QOAuthHttpServerReplyHandler::setCallbackHost(const QString &host)
+{
+    Q_D(QOAuthHttpServerReplyHandler);
+    d->callbackHostname = host;
 }
 
 /*!

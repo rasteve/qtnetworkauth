@@ -35,6 +35,9 @@ public:
     QString callbackPath() const;
     void setCallbackPath(const QString &path);
 
+    QString callbackHost() const;
+    void setCallbackHost(const QString &path);
+
     QString callbackText() const;
     void setCallbackText(const QString &text);
 

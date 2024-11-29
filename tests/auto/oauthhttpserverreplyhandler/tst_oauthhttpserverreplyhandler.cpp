@@ -462,6 +462,7 @@ void tst_QOAuthHttpServerReplyHandler::localhostHttps()
 void tst_QOAuthHttpServerReplyHandler::callbackHost_data()
 {
     QTest::addColumn<QHostAddress>("hostAddress");
+    QTest::addColumn<QString>("hostName");
     QTest::addColumn<QUrl>("expectedCallback");
 
     const QString localhost = u"localhost"_s;
@@ -473,36 +474,54 @@ void tst_QOAuthHttpServerReplyHandler::callbackHost_data()
     const QString ipv6literal = u"::1"_s;
     const QUrl ipv6literalCallback = u"http://[::1]/"_s;
 
+    const QString localnet = u"localhost.localnet"_s;
+    const QUrl localnetCallback = u"http://localhost.localnet/"_s;
+
     QTest::newRow("default")
-        << QHostAddress() << ipv4literalCallback;
+        << QHostAddress() << QString() << ipv4literalCallback;
     QTest::newRow("LocalHost")
-        << QHostAddress(QHostAddress::SpecialAddress::LocalHost) << ipv4literalCallback;
+        << QHostAddress(QHostAddress::SpecialAddress::LocalHost)
+        << QString() << ipv4literalCallback;
     QTest::newRow("127.0.0.1")
-        << QHostAddress(ipv4literal) << ipv4literalCallback;
+        << QHostAddress(ipv4literal) << QString() << ipv4literalCallback;
     QTest::newRow("LocalHostIPv6")
-        << QHostAddress(QHostAddress::SpecialAddress::LocalHostIPv6) << ipv6literalCallback;
+        << QHostAddress(QHostAddress::SpecialAddress::LocalHostIPv6) << QString()
+        << ipv6literalCallback;
     QTest::newRow("::1")
-        << QHostAddress(ipv6literal) << ipv6literalCallback;
+        << QHostAddress(ipv6literal) << QString() << ipv6literalCallback;
     QTest::newRow("AnyIPv4")
-        << QHostAddress(QHostAddress::SpecialAddress::AnyIPv4) << localhostCallback;
+        << QHostAddress(QHostAddress::SpecialAddress::AnyIPv4) << QString() << localhostCallback;
     QTest::newRow("0.0.0.0")
-        << QHostAddress("0.0.0.0") << localhostCallback;
+        << QHostAddress("0.0.0.0") << QString() << localhostCallback;
     QTest::newRow("AnyIPv6")
-        << QHostAddress(QHostAddress::SpecialAddress::AnyIPv6) << localhostCallback;
-    QTest::newRow("::")
-        << QHostAddress("::") << localhostCallback;
+        << QHostAddress(QHostAddress::SpecialAddress::AnyIPv6) << QString() << localhostCallback;
+    QTest::newRow("::") << QHostAddress("::") << QString() << localhostCallback;
+
+    // Following rows test that manually set hostname always takes precedence
+    QTest::newRow("localhost.localnet(default)")
+        << QHostAddress() << localnet << localnetCallback;
+    QTest::newRow("localhost.localnet(AnyIPv4)")
+        << QHostAddress(QHostAddress::SpecialAddress::AnyIPv4) << localnet << localnetCallback;
+    QTest::newRow("localhost.localnet(AnyIPv6)")
+        << QHostAddress(QHostAddress::SpecialAddress::AnyIPv6) << localnet << localnetCallback;
+    QTest::newRow("localhost.localnet(127.0.0.1)")
+        << QHostAddress(ipv4literal) << localnet << localnetCallback;
 }
 
 void tst_QOAuthHttpServerReplyHandler::callbackHost()
 {
     QFETCH(const QHostAddress, hostAddress);
+    QFETCH(const QString, hostName);
     QFETCH(QUrl, expectedCallback);
 
     QOAuthHttpServerReplyHandler replyHandler(hostAddress, 0); // 0 for any port
+    if (!hostName.isEmpty())
+        replyHandler.setCallbackHost(hostName);
 
     QVERIFY(replyHandler.isListening());
     expectedCallback.setPort(replyHandler.port());
     QCOMPARE(QUrl(replyHandler.callback()), expectedCallback);
+    QCOMPARE(replyHandler.callbackHost(), expectedCallback.host());
 }
 
 QTEST_MAIN(tst_QOAuthHttpServerReplyHandler)

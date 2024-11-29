@@ -42,6 +42,7 @@ public:
     QString text;
     QString path;
     QHostAddress callbackAddress;
+    QString callbackHostname;
     quint16 callbackPort = 0;
 
 private:
