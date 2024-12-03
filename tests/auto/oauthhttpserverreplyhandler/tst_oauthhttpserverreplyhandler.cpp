@@ -133,7 +133,7 @@ void tst_QOAuthHttpServerReplyHandler::networkReplyErrors()
     });
 
     constexpr auto expectWarning = [](const QString &warningText) {
-        const QRegularExpression warning{u"Token request failed: \"" + warningText};
+        const QRegularExpression warning{u"Token request failed: \""_s + warningText};
         QTest::ignoreMessage(QtWarningMsg, warning);
     };
 
